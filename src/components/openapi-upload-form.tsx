@@ -75,19 +75,28 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         const responseBodyText = await response.text(); 
 
         if (!response.ok) {
-          let descriptiveError = `Failed to fetch from URL ${data.url}: ${response.status} ${response.statusText}`; // Default
+          let descriptiveError = `Failed to fetch from URL ${data.url}: ${response.status} ${response.statusText}`;
           try {
-            const errorResult = JSON.parse(responseBodyText); // responseBodyText is from our /api/fetch-spec
+            // Attempt to parse our API's error response first
+            const errorResult = JSON.parse(responseBodyText); 
             if (errorResult && typeof errorResult.error === 'string') {
-              descriptiveError = errorResult.error; // Use the specific error message from our API
+              descriptiveError = errorResult.error;
+            } else if (errorResult && typeof errorResult.message === 'string') {
+               descriptiveError = errorResult.message;
             } else {
-               // Our /api/fetch-spec returned ok:false but not the expected { error: "..." } JSON structure.
-              descriptiveError = `Proxy API returned an unexpected error structure (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
+               // If our API's error response is not in expected format, use the raw text
+               descriptiveError = `Proxy API returned an unexpected error structure (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
             }
           } catch (parseError) {
-            // This means our /api/fetch-spec endpoint returned a non-JSON error response.
-             console.error("Proxy API returned non-JSON error:", responseBodyText);
-            descriptiveError = `Proxy API returned an invalid error format (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
+            // This means our /api/fetch-spec endpoint returned a non-JSON error response, or external server did
+             console.error("Proxy API returned non-JSON error or external server error:", responseBodyText);
+             if (responseBodyText.toLowerCase().includes("<html>")) {
+                descriptiveError = `Failed to fetch. External server returned an HTML page (Status: ${response.status} ${response.statusText}). This could be an error page or auth prompt.`;
+             } else if (responseBodyText.length > 0) {
+                descriptiveError = `Failed to fetch. External server returned unexpected non-JSON, non-HTML content for status ${response.status}. Preview (first 100 chars): ${responseBodyText.substring(0,100)}...`;
+             } else {
+                descriptiveError = `Failed to fetch from URL ${data.url}: ${response.status} ${response.statusText}. The server returned an empty response.`;
+             }
           }
           throw new Error(descriptiveError);
         }
@@ -115,12 +124,9 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
           parsedContent = JSON.parse(rawSpecText);
         }
         
-        // SwaggerParser.bundle can also dereference, which is good.
-        // Ensure parsedContent is a plain JS object for SwaggerParser
         const specToBundle = JSON.parse(JSON.stringify(parsedContent));
         specObject = (await SwaggerParser.bundle(specToBundle)) as OpenAPI.Document; 
-        // Ensure rawSpecText is YAML for consistent storage/display if desired, or keep original rawSpecText
-        rawSpecText = YAML.dump(specObject); // Convert bundled/validated spec back to YAML
+        rawSpecText = YAML.dump(specObject); 
       }
       
       setSpec({
@@ -157,10 +163,8 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
   
   const exampleSpecs = [
     {name: "Swagger Petstore (v2 JSON)", url: "https://petstore.swagger.io/v2/swagger.json"},
-    {name: "OpenAPI Petstore (v3 YAML)", url: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml"},
-    // Gitea might require auth or have CORS, so it's less reliable for a quick demo fetch via simple proxy.
-    // {name: "Gitea API (v1 JSON)", url: "https://try.gitea.io/swagger.v1.json"}, 
-    {name: "Public APIs (YAML)", url: "https://api.apis.guru/v2/specs/apis.guru/2.2.0/openapi.yaml"}
+    {name: "OpenAPI Petstore (v3 YAML)", url: "https://petstore3.swagger.io/api/v3/openapi.yaml"},
+    {name: "Public APIs (apis.guru YAML)", url: "https://api.apis.guru/v2/specs/apis.guru/2.2.0/openapi.yaml"}
   ];
 
 
