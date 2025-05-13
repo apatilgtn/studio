@@ -25,16 +25,16 @@ import {
   PlusCircle,
   Trash2,
   Network,
-  ArrowRightCircle,
+  ArrowRightCircle, // Ensure ArrowRightCircle is imported
   Edit3,
   Edit,
-  Home, 
+  Home,
   ListChecks,
-  FilePlus2, 
-  FileOutput,  
-  Activity,    
-  HeartPulse,  
-  ShieldCheck, 
+  FilePlus2,
+  FileOutput,
+  Activity,
+  HeartPulse,
+  ShieldCheck,
   Gavel,
   LogIn,
   LogOut,
@@ -50,13 +50,12 @@ import {
   PlayCircle,
   RefreshCw,
   Maximize,
-  Palette, // For Pattern Intelligence or general design
+  Palette,
   Search,
   Radar, // For Live API Discovery
   TrendingUp, // For Predictive Monitoring
   Webhook, // Alternative for discovery or events
   LocateFixed, // Alternative for discovery
-  // ServerSearch, // Alternative for discovery - REMOVED as it does not exist
   BrainCircuit, // Alternative for predictive/AI
   Gauge, // Alternative for monitoring/predictive
 } from 'lucide-react';
@@ -87,7 +86,8 @@ export const Icons = {
   HttpPost: PlusCircle,
   HttpDelete: Trash2,
   HttpPatch: Edit,
-  HttpGet: ArrowRightCircle, 
+  HttpGet: ArrowRightCircle,
+  ArrowRightCircle, // Add ArrowRightCircle here
   Network,
   Home,
   ListChecks,
@@ -117,7 +117,6 @@ export const Icons = {
   TrendingUp,
   Webhook,
   LocateFixed,
-  // ServerSearch, // REMOVED
   BrainCircuit,
   Gauge,
 };
@@ -132,4 +131,3 @@ export const ApiMethodIcons: Record<string, React.ElementType> = {
   head: Icons.Eye,
   trace: Icons.GitFork,
 };
-
