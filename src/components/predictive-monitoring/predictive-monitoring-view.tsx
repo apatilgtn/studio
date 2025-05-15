@@ -8,9 +8,8 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Input } from "@/components/ui/input"; // Added import for Input
+import { Input } from "@/components/ui/input"; 
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input"; // Added import for Input
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -197,26 +196,6 @@ export function PredictiveMonitoringView() {
                     <ChartContainer config={chartConfig} className="w-full h-[200px]">
                         <ResponsiveContainer>
                         <LineChart data={chart.data} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-<<<<<<< HEAD
-                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5}/>
-                            <XAxis dataKey="date" tickFormatter={(tick) => tick.slice(5)} className="text-[10px]" />
-                            <YAxis className="text-[10px]" domain={['auto', 'auto']}/>
-                            <Tooltip 
-                              content={<ChartTooltipContent 
-                                         indicator="line" 
-                                         className="text-xs shadow-lg" 
-                                         labelClassName="font-semibold"
-                                         nameKey="label"
-                                       />} 
-                              cursor={{stroke: chartConfig[chart.dataKey]?.color, strokeWidth:1, strokeDasharray: "3 3"}}
-                            />
-                            <Legend 
-                              verticalAlign="top" 
-                              height={30}
-                              wrapperStyle={{fontSize: "10px"}}
-                            />
-                            <Line type="monotone" dataKey="value" stroke={chartConfig[chart.dataKey]?.color || "#8884d8"} strokeWidth={2} dot={false} name={chartConfig[chart.dataKey]?.label as string} />
-=======
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.7)" />
                             <XAxis dataKey="date" 
                                 tickFormatter={(tick) => new Date(tick).toLocaleDateString('en-US', { month: 'short', day: 'numeric'})} 
@@ -235,7 +214,6 @@ export function PredictiveMonitoringView() {
                                 cursor={{ stroke: chart.color, strokeWidth: 1.5 , strokeDasharray:"3 3"}}
                             />
                             <Line type="monotone" dataKey="value" stroke={chart.color} strokeWidth={2.5} dot={false} name={chartConfig[chart.dataKey]?.label as string} activeDot={{ r: 5, strokeWidth:1, fill: chart.color, stroke: "hsl(var(--background))" }}/>
->>>>>>> APIHarmony-Lite/master
                         </LineChart>
                         </ResponsiveContainer>
                     </ChartContainer>
@@ -357,7 +335,4 @@ export function PredictiveMonitoringView() {
   );
 }
 
-<<<<<<< HEAD
-=======
     
->>>>>>> APIHarmony-Lite/master
