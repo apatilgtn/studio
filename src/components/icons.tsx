@@ -25,7 +25,7 @@ import {
   PlusCircle,
   Trash2,
   Network,
-  ArrowRightCircle, // Ensure ArrowRightCircle is imported
+  ArrowRightCircle, 
   Edit3,
   Edit,
   Home,
@@ -50,7 +50,7 @@ import {
   PlayCircle,
   RefreshCw,
   Maximize,
-  Palette,
+  Palette, // For Pattern Intelligence or general design
   Search,
   Radar, // For Live API Discovery
   TrendingUp, // For Predictive Monitoring
@@ -58,12 +58,22 @@ import {
   LocateFixed, // Alternative for discovery
   BrainCircuit, // Alternative for predictive/AI
   Gauge, // Alternative for monitoring/predictive
-  User, // Added for PatternDiagram
-  ShoppingCart, // Added for PatternDiagram
-  ArrowDown, // Added for PatternDiagram
-  Database, // Added for PatternDiagram
-  Shield, // Added for API Gateway
-  ImageIcon, // Added for default diagram placeholder
+  User, 
+  ShoppingCart, 
+  ArrowDown,
+  Database,
+  Shield,
+  ImageIcon,
+  KeyRound, // For OAuth
+  List, // For Pagination
+  ArrowLeft, // For Content Negotiation
+  ServerCog, // For Admin Settings
+  Link2, // For Admin Integrations
+  Rocket, // For Getting Started
+  Layers, // For API Discovery (alternative)
+  Blend, // For Pattern Intelligence (alternative)
+  BarChartHorizontal, // For Analytics
+  Landmark // For Governance
 } from 'lucide-react';
 
 export const Icons = {
@@ -117,7 +127,7 @@ export const Icons = {
   PlayCircle,
   RefreshCw,
   Maximize,
-  Palette,
+  Palette, 
   Search,
   Radar,
   TrendingUp,
@@ -131,6 +141,16 @@ export const Icons = {
   Database,
   Shield,
   ImageIcon,
+  KeyRound,
+  List,
+  ArrowLeft,
+  ServerCog,
+  Link2,
+  Rocket,
+  Layers,
+  Blend,
+  BarChartHorizontal,
+  Landmark
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
