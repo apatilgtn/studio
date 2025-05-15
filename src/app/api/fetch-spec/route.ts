@@ -18,16 +18,28 @@ export async function POST(request: NextRequest) {
     }
 
     let parsedSpec: any; 
-    let rawSpecTextForOutput: string;
+    // let rawSpecTextForOutput: string; // Will be generated after validation
 
-    const externalResponse = await fetch(specUrl);
+    const externalResponse = await fetch(specUrl, {
+      headers: {
+        'User-Agent': 'APIHarmonyLite-Fetcher/1.0',
+        'Accept': 'application/json, application/yaml, text/yaml, application/x-yaml, text/plain, */*',
+      }
+    });
     responseBodyText = await externalResponse.text(); 
 
     if (!externalResponse.ok) {
       let errorMsgFromExternalServer = `Request to ${specUrl} failed: ${externalResponse.status} ${externalResponse.statusText}`;
       const contentType = externalResponse.headers.get('content-type');
 
-      if (contentType?.includes('application/json')) {
+      if (externalResponse.status === 404) {
+         errorMsgFromExternalServer = `Failed to fetch spec. External server at ${specUrl} returned status 404 Not Found. Please check if the URL is correct and publicly accessible.`;
+         if (contentType?.includes('text/html')) {
+             errorMsgFromExternalServer += ` The content appears to be an HTML page, not the API specification.`;
+         } else if (responseBodyText && responseBodyText.length > 0 && !contentType?.includes('application/json') && !contentType?.includes('application/yaml') && !contentType?.includes('text/yaml') && !contentType?.includes('text/plain')) {
+            errorMsgFromExternalServer += ` Unexpected content type: ${contentType}. Preview (first 100 chars): ${responseBodyText.substring(0, 100)}...`;
+         }
+      } else if (contentType?.includes('application/json')) {
         try {
           const errorJson = JSON.parse(responseBodyText); 
           if (errorJson && errorJson.message) {
@@ -52,21 +64,24 @@ export async function POST(request: NextRequest) {
     try {
       parsedSpec = YAML.load(responseBodyText) as OpenAPI.Document;
       if (typeof parsedSpec !== 'object' || parsedSpec === null || (!parsedSpec.swagger && !parsedSpec.openapi)) {
-          throw new Error("Parsed YAML is not a valid OpenAPI object, trying JSON.");
+          // If YAML.load results in a non-object or string, it might not be YAML or it might be JSON.
+          // Try parsing as JSON as a fallback.
+          try {
+            parsedSpec = JSON.parse(responseBodyText) as OpenAPI.Document;
+             if (typeof parsedSpec !== 'object' || parsedSpec === null || (!parsedSpec.swagger && !parsedSpec.openapi)) {
+                throw new Error("Parsed content is not a valid OpenAPI object after attempting YAML and JSON.");
+            }
+          } catch (jsonError) {
+             throw new Error("Content is not valid YAML or JSON.");
+          }
       }
-    } catch (yamlError) {
-      try {
-        parsedSpec = JSON.parse(responseBodyText) as OpenAPI.Document;
-        if (typeof parsedSpec !== 'object' || parsedSpec === null || (!parsedSpec.swagger && !parsedSpec.openapi)) {
-            throw new Error("Parsed JSON is not a valid OpenAPI object.");
-        }
-      } catch (jsonError: any) {
-        console.error('Error parsing spec as YAML or JSON:', { yamlError, jsonError });
-        throw new Error(`Failed to parse specification from ${specUrl}. Content is not valid YAML or JSON. YAML error: ${(yamlError as Error).message}, JSON error: ${jsonError.message}`);
-      }
+    } catch (parseError: any) {
+        console.error('Error parsing spec as YAML or JSON:', parseError);
+        throw new Error(`Failed to parse specification from ${specUrl}. Content is not valid YAML or JSON. Error: ${parseError.message}`);
     }
 
-    if (parsedSpec.openapi && typeof parsedSpec.openapi === 'string' && parsedSpec.openapi > '3.0.3' && parsedSpec.openapi.startsWith('3.0.')) {
+
+    if (parsedSpec.openapi && typeof parsedSpec.openapi === 'string' && parsedSpec.openapi.startsWith('3.0.') && parsedSpec.openapi > '3.0.3') {
         console.warn(`Attempting to override OpenAPI version from ${parsedSpec.openapi} to 3.0.3 for URL: ${specUrl}`);
         parsedSpec.openapi = '3.0.3';
         versionOverridden = true;
@@ -74,30 +89,17 @@ export async function POST(request: NextRequest) {
     
     let validatedSpecToReturn: OpenAPI.Document;
     try {
-      const specToValidate = JSON.parse(JSON.stringify(parsedSpec)); 
-      validatedSpecToReturn = await SwaggerParser.validate(specToValidate) as OpenAPI.Document;
+      // SwaggerParser.validate/bundle can take the parsed object directly.
+      // Dereferencing and bundling might be more robust:
+      validatedSpecToReturn = await SwaggerParser.bundle(JSON.parse(JSON.stringify(parsedSpec))) as OpenAPI.Document;
     } catch (validationError: any) {
-      if (!versionOverridden && validationError.message && validationError.message.includes("Unsupported OpenAPI version")) {
-        const openApiVersionMatch = validationError.message.match(/Unsupported OpenAPI version: (3\.0\.\d+)/);
-        if (openApiVersionMatch && openApiVersionMatch[1] > '3.0.3') {
-          console.warn(`Retrying validation: Overriding OpenAPI version from ${parsedSpec.openapi} to 3.0.3 for URL: ${specUrl}`);
-          parsedSpec.openapi = '3.0.3';
-          versionOverridden = true;
-          const specToReValidate = JSON.parse(JSON.stringify(parsedSpec));
-          try {
-            validatedSpecToReturn = await SwaggerParser.validate(specToReValidate) as OpenAPI.Document;
-          } catch (secondValidationError: any) {
-            throw new Error(`Failed to validate spec from ${specUrl} even after overriding version to 3.0.3: ${secondValidationError.message}`);
-          }
-        } else {
-          throw validationError; 
-        }
-      } else {
-        throw validationError; 
-      }
+      // The version override logic for unsupported versions is now primarily handled before this step.
+      // If it still fails due to version, it's likely a more fundamental incompatibility.
+      throw new Error(`Failed to validate/bundle spec from ${specUrl}: ${validationError.message}`);
     }
     
-    rawSpecTextForOutput = YAML.dump(validatedSpecToReturn); 
+    // Convert the validated (and potentially bundled) spec back to YAML for the rawSpecText output.
+    const rawSpecTextForOutput = YAML.dump(validatedSpecToReturn); 
     
     return NextResponse.json({ specObject: validatedSpecToReturn, rawSpecText: rawSpecTextForOutput, versionOverridden });
 
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
     
     console.error(`Error in fetch-spec proxy for URL: ${specUrl || 'Unknown URL provided in request'}. Details:`, errorContext, error.stack);
     
-    let friendlyMessage = `An error occurred while processing the specification from ${specUrl || 'the provided URL'}.`;
+    let friendlyMessage = `An unexpected error occurred while fetching or parsing the specification.`;
 
     if (errorContext) {
         if (errorContext.includes("Unsupported OpenAPI version")) {
@@ -125,7 +127,6 @@ export async function POST(request: NextRequest) {
         } else if (errorContext.includes("Failed to validate spec") || errorContext.startsWith("Failed to parse specification") || errorContext.startsWith("Request to") || errorContext.startsWith("External server")) {
             friendlyMessage = errorContext; 
         } else {
-            // For other errors, provide a snippet of the error context
             friendlyMessage = `Error processing specification: ${errorContext.substring(0, 200)}${errorContext.length > 200 ? '...' : ''}`;
         }
     }
