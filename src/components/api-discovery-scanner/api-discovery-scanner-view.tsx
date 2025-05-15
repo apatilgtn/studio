@@ -205,16 +205,16 @@ export function APIDiscoveryScannerView() {
           {!isLoading && discoveredApis.length > 0 && (
             <ScrollArea className="h-[500px] border rounded-md">
               <Table>
-                <TableHeader className="bg-muted/50 sticky top-0">
+                <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[200px]">Name</TableHead>
-                    <TableHead>Endpoint</TableHead>
-                    <TableHead className="w-[100px]">Method</TableHead>
+                    <TableHead className="w-[180px]">Name</TableHead>
+                    <TableHead className="min-w-[200px]">Endpoint</TableHead>
+                    <TableHead className="w-[90px]">Method</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[120px]">Response Time</TableHead>
-                    <TableHead className="w-[100px]">Security</TableHead>
-                    <TableHead className="w-[100px]">Undoc'd</TableHead>
-                    <TableHead className="w-[120px]">Last Scanned</TableHead>
+                    <TableHead className="w-[100px]">Response Time</TableHead>
+                    <TableHead className="w-[90px]">Security</TableHead>
+                    <TableHead className="w-[80px] text-center">Undoc'd</TableHead>
+                    <TableHead className="w-[140px]">Last Scanned</TableHead>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -239,8 +239,8 @@ export function APIDiscoveryScannerView() {
                           {api.security}
                         </Badge>
                       </TableCell>
-                       <TableCell>
-                        {api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500" /> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500" />}
+                       <TableCell className="text-center"> {/* Ensured Undoc'd content is also centered */}
+                        {api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" /> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" />}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{api.lastScanned}</TableCell>
                       <TableCell className="text-right">
@@ -267,3 +267,4 @@ export function APIDiscoveryScannerView() {
     </div>
   );
 }
+
