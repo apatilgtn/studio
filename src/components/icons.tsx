@@ -44,36 +44,39 @@ import {
   AlertOctagon,
   SlidersHorizontal,
   ClipboardList,
+  ClipboardCheck, // Added
+  Wrench,         // Added
   Lightbulb,
   LineChart,
   PauseCircle,
   PlayCircle,
   RefreshCw,
   Maximize,
-  Palette, // For Pattern Intelligence or general design
+  Palette, 
   Search,
-  Radar, // For Live API Discovery
-  TrendingUp, // For Predictive Monitoring
-  Webhook, // Alternative for discovery or events
-  LocateFixed, // Alternative for discovery
-  BrainCircuit, // Alternative for predictive/AI
-  Gauge, // Alternative for monitoring/predictive
+  Radar, 
+  TrendingUp, 
+  Webhook, 
+  LocateFixed, 
+  BrainCircuit, 
+  Gauge, 
   User, 
   ShoppingCart, 
   ArrowDown,
   Database,
   Shield,
   ImageIcon,
-  KeyRound, // For OAuth
-  List, // For Pagination
-  ArrowLeft, // For Content Negotiation
-  ServerCog, // For Admin Settings
-  Link2, // For Admin Integrations
-  Rocket, // For Getting Started
-  Layers, // For API Discovery (alternative)
-  Blend, // For Pattern Intelligence (alternative)
-  BarChartHorizontal, // For Analytics
-  Landmark // For Governance
+  KeyRound, 
+  List, 
+  ArrowLeft, 
+  ServerCog, 
+  Link2, 
+  Rocket, 
+  Layers, 
+  Blend, 
+  BarChartHorizontal, 
+  Landmark,
+  ServerCrash,
 } from 'lucide-react';
 
 export const Icons = {
@@ -121,6 +124,8 @@ export const Icons = {
   AlertOctagon,
   SlidersHorizontal,
   ClipboardList,
+  ClipboardCheck, // Added
+  Wrench,         // Added
   Lightbulb,
   LineChart,
   PauseCircle,
@@ -150,7 +155,8 @@ export const Icons = {
   Layers,
   Blend,
   BarChartHorizontal,
-  Landmark
+  Landmark,
+  ServerCrash, 
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
@@ -163,3 +169,4 @@ export const ApiMethodIcons: Record<string, React.ElementType> = {
   head: Icons.Eye,
   trace: Icons.GitFork,
 };
+
