@@ -15,6 +15,7 @@ const navItems = [
   { href: "/dependency-graph", label: "Dependency Graph", icon: Icons.GitFork },
   { href: "/integration-analysis", label: "Integration Analysis", icon: Icons.Palette },
   { href: "/live-api-discovery", label: "Live API Discovery", icon: Icons.Radar },
+  { href: "/api-discovery-scanner", label: "API Discovery Scanner", icon: Icons.Radar },
   { href: "/health-monitoring", label: "Health Monitoring", icon: Icons.Activity },
   { href: "/predictive-monitoring", label: "Predictive Monitoring", icon: Icons.TrendingUp },
   { href: "/vulnerability-scan", label: "Vulnerability Scan", icon: Icons.ShieldAlert },
@@ -27,7 +28,7 @@ export function AppSidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 flex h-full w-60 flex-col border-r bg-sidebar text-sidebar-foreground shadow-lg">
-      <nav className="flex flex-col gap-2 px-3 py-4">
+      <nav className="flex flex-col gap-2 px-3 py-4 overflow-y-auto"> {/* Added overflow-y-auto here */}
         <Link
           href="/"
           className="group mb-4 flex h-14 items-center justify-start gap-3 rounded-lg px-4 py-3 text-xl font-bold text-primary-foreground bg-primary shadow-md"
