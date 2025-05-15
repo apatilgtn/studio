@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 
 interface SelectedItem {
@@ -84,6 +85,7 @@ export function IntegrationAnalysisView() {
     if (activeTab === 'pattern-intelligence' && rawSpec && !analysisResults && !isLoadingAnalysis && !analysisError && !isStoreLoading) {
       handleAnalysis();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, rawSpec, analysisResults, isLoadingAnalysis, analysisError, isStoreLoading]);
 
 
