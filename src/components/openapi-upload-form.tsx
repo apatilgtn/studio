@@ -78,25 +78,31 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         if (!response.ok) {
           let descriptiveError = `Error fetching spec via proxy: ${response.status} ${response.statusText}`;
           try {
+            // Attempt to parse as JSON, as the proxy should return JSON errors
             const errorJson = JSON.parse(responseBodyText);
             if (errorJson && errorJson.error) {
                descriptiveError = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
-            } else if (errorJson && errorJson.message) { // For other backend errors that might use .message
+            } else if (errorJson && errorJson.message) { 
                descriptiveError = typeof errorJson.message === 'string' ? errorJson.message : JSON.stringify(errorJson.message);
             } else {
               // Fallback if parsing or structure is unexpected but status suggests an error
               descriptiveError = `Proxy API returned status ${response.status} but error message is unclear. Raw response: ${responseBodyText.substring(0, 150)}...`;
             }
           } catch (e) {
-            // If responseBodyText itself is not JSON (e.g., HTML error page from external server)
-            descriptiveError = `Failed to fetch spec. External server returned status ${response.status} ${response.statusText} with non-JSON content. Preview: ${responseBodyText.substring(0, 150)}...`;
+            // If responseBodyText itself is not JSON (e.g., HTML error page from external server, or just text)
+             if (responseBodyText.toLowerCase().includes("<html")) {
+               descriptiveError = `Failed to fetch spec. External server returned an HTML page (status ${response.status} ${response.statusText}). This could be an error page or authentication prompt.`;
+             } else {
+               descriptiveError = `Failed to fetch spec. External server at ${data.url} returned status ${response.status} ${response.statusText} with unexpected content. Preview (first 100 chars): ${responseBodyText.substring(0, 100)}...`;
+             }
           }
           throw new Error(descriptiveError);
         }
         
-        const result = JSON.parse(responseBodyText); // responseBodyText is now guaranteed to be JSON if response.ok
+        // If response.ok, parse the already read responseBodyText
+        const result = JSON.parse(responseBodyText); 
         
-        if (result.error) { // Should not happen if response.ok, but as a safeguard from proxy logic
+        if (result.error) { // Should not happen if response.ok, but as a safeguard
             throw new Error(result.error);
         }
         
@@ -128,6 +134,7 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         }
 
         try {
+          // Use a deep copy for bundling to avoid SwaggerParser modifying the object by reference in some cases
           const specToBundle = JSON.parse(JSON.stringify(parsedContentForFile));
           specObject = (await SwaggerParser.bundle(specToBundle)) as OpenAPI.Document;
         } catch (bundleError: any) {
@@ -137,7 +144,7 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
             }
             throw bundleError; // Re-throw original error
         }
-        rawSpecText = YAML.dump(specObject); 
+        rawSpecText = YAML.dump(specObject); // Always output YAML for consistency in the store
 
         if (wasVersionOverridden) {
           toast({
@@ -192,9 +199,9 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
   
   const exampleSpecs = [
     {name: "Swagger Petstore (v2 JSON)", url: "https://petstore.swagger.io/v2/swagger.json"},
-    // The Gitea link often causes issues due to version or structure, let's use a more standard v3 example.
-    {name: "OpenAPI Petstore (v3 YAML)", url: "https://petstore3.swagger.io/api/v3/openapi.yaml"}, 
-    {name: "Zoom API (v2 JSON)", url: "https://marketplace.zoom.us/docs/api-reference/zoom-api/oas-api.json"} 
+    {name: "Guru API (v1 JSON)", url: "https://api.getguru.com/api/v1/openapi.json"},
+    {name: "Kubernetes API (v3 JSON)", url: "https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api.json"},
+    {name: "Petstore OpenAPI v3 (YAML)", url: "https://petstore3.swagger.io/api/v3/openapi.yaml"} 
   ];
 
 
