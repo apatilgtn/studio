@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useOpenApiStore } from "@/stores/openapi-store";
@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { PatternDiagram } from "./pattern-diagram";
 
 
 interface SelectedItem {
@@ -25,8 +26,6 @@ interface SelectedItem {
   impact?: string; // For anti-patterns
   rationale?: string; // For recommendations
   priority?: "High" | "Medium" | "Low"; // For recommendations
-  diagram?: string; 
-  diagramHint?: string;
   type: 'pattern' | 'anti-pattern' | 'recommendation';
 }
 
@@ -71,7 +70,7 @@ export function IntegrationAnalysisView() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("ai-feature-suite");
 
-  const handleSpecLoad = () => {
+  const handleSpecLoadSuccess = useCallback(() => {
     setAnalysisResults(null);
     setSelectedItem(null);
     setAnalysisError(null);
@@ -79,8 +78,10 @@ export function IntegrationAnalysisView() {
     if (activeTab === 'pattern-intelligence' && rawSpec && !isStoreLoading) {
       handleAnalysis();
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, rawSpec, isStoreLoading]); // Removed handleAnalysis from deps to avoid loop
   
+  // Trigger analysis when tab becomes active and spec is available
   useEffect(() => {
     if (activeTab === 'pattern-intelligence' && rawSpec && !analysisResults && !isLoadingAnalysis && !analysisError && !isStoreLoading) {
       handleAnalysis();
@@ -102,6 +103,7 @@ export function IntegrationAnalysisView() {
     setIsLoadingAnalysis(true);
     setAnalysisError(null);
     setSelectedItem(null); // Reset selected item on new analysis
+    setAnalysisResults(null); // Clear previous results
 
     try {
       const results = await integrationPatternAnalysis({ openApiSpec: rawSpec });
@@ -144,23 +146,19 @@ export function IntegrationAnalysisView() {
  const handleItemSelect = (item: any, type: SelectedItem['type']) => {
     let name: string;
     let description: string;
-    let diagramHint = "integration diagram";
 
     switch (type) {
       case 'pattern':
         name = item.name;
         description = item.description;
-        if (name.toLowerCase().includes("point-to-point")) diagramHint = "connection points";
-        else if (name.toLowerCase().includes("api gateway")) diagramHint = "gateway architecture";
-        else if (name.toLowerCase().includes("cqrs")) diagramHint = "command query";
         break;
       case 'anti-pattern':
         name = item.name;
         description = item.description;
         break;
       case 'recommendation':
-        name = item.recommendation;
-        description = item.rationale;
+        name = item.recommendation; // For recommendations, name is the recommendation text itself
+        description = item.rationale; // Description is the rationale
         break;
       default:
         name = "Details";
@@ -174,8 +172,6 @@ export function IntegrationAnalysisView() {
       impact: item.impact,
       rationale: item.rationale,
       priority: item.priority,
-      diagram: `https://placehold.co/600x300.png`, // Generic placeholder
-      diagramHint: diagramHint,
       type: type
     });
   };
@@ -203,7 +199,7 @@ export function IntegrationAnalysisView() {
                   Import an OpenAPI spec to enable integration analysis and other AI features.
                 </AlertDescription>
               </Alert>
-              <OpenApiUploadForm onSpecLoaded={handleSpecLoad} />
+              <OpenApiUploadForm onSpecLoaded={handleSpecLoadSuccess} />
             </>
           )}
           {isStoreLoading && !specError && (
@@ -218,7 +214,7 @@ export function IntegrationAnalysisView() {
                 <AlertTitle>Error with Specification</AlertTitle>
                 <AlertDescription>
                   There was an error: {specError}. Please try importing again.
-                  <div className="mt-4"><OpenApiUploadForm onSpecLoaded={handleSpecLoad} /></div>
+                  <div className="mt-4"><OpenApiUploadForm onSpecLoaded={handleSpecLoadSuccess} /></div>
                 </AlertDescription>
             </Alert>
           )}
@@ -226,7 +222,7 @@ export function IntegrationAnalysisView() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="ai-feature-suite">
-                  <Icons.BrainCircuit className="w-4 h-4 mr-2"/>AI Feature Suite
+                  <Icons.LayoutDashboard className="w-4 h-4 mr-2"/>AI Feature Suite
                 </TabsTrigger>
                 <TabsTrigger value="pattern-intelligence">
                   <Icons.Palette className="w-4 h-4 mr-2"/>Pattern Intelligence
@@ -459,7 +455,7 @@ export function IntegrationAnalysisView() {
                                 {selectedItem.type === 'recommendation' && selectedItem.priority && <Badge variant={selectedItem.priority === "High" ? "destructive" : selectedItem.priority === "Medium" ? "secondary" : "outline"} className="ml-2 text-xxs px-1.5 py-0.5">{selectedItem.priority} Priority</Badge>}
                                 </CardDescription>
                             </CardHeader>
-                            <ScrollArea className="h-[420px]"> {/* Fixed height for scroll area */}
+                            <ScrollArea className="h-[calc(100%-120px)]"> {/* Adjusted height */}
                               <CardContent className="pt-0">
                                 <p className="text-sm mb-3">{selectedItem.description}</p>
                                 {selectedItem.rationale && selectedItem.type === 'recommendation' && (
@@ -473,12 +469,8 @@ export function IntegrationAnalysisView() {
                                     </ul>
                                   </div>
                                 )}
-                                {selectedItem.type === 'pattern' && selectedItem.diagram && (
-                                  <div className="mt-4 border rounded-md p-2 bg-muted/20">
-                                      <h4 className="text-sm font-semibold mb-2 text-center">Illustrative Diagram</h4>
-                                    <Image src={selectedItem.diagram} alt={`${selectedItem.name} Diagram`} width={600} height={300} className="rounded-md object-contain mx-auto" data-ai-hint={selectedItem.diagramHint || "integration diagram"}/>
-                                    <p className="text-xs text-muted-foreground text-center mt-1">Note: This is a placeholder diagram.</p>
-                                  </div>
+                                {selectedItem.type === 'pattern' && (
+                                  <PatternDiagram patternName={selectedItem.name} />
                                 )}
                               </CardContent>
                             </ScrollArea>
@@ -508,4 +500,3 @@ export function IntegrationAnalysisView() {
     </div>
   );
 }
-

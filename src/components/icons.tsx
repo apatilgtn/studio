@@ -58,6 +58,12 @@ import {
   LocateFixed, // Alternative for discovery
   BrainCircuit, // Alternative for predictive/AI
   Gauge, // Alternative for monitoring/predictive
+  User, // Added for PatternDiagram
+  ShoppingCart, // Added for PatternDiagram
+  ArrowDown, // Added for PatternDiagram
+  Database, // Added for PatternDiagram
+  Shield, // Added for API Gateway
+  ImageIcon, // Added for default diagram placeholder
 } from 'lucide-react';
 
 export const Icons = {
@@ -87,7 +93,7 @@ export const Icons = {
   HttpDelete: Trash2,
   HttpPatch: Edit,
   HttpGet: ArrowRightCircle,
-  ArrowRightCircle, // Add ArrowRightCircle here
+  ArrowRightCircle, 
   Network,
   Home,
   ListChecks,
@@ -119,6 +125,12 @@ export const Icons = {
   LocateFixed,
   BrainCircuit,
   Gauge,
+  User,
+  ShoppingCart,
+  ArrowDown,
+  Database,
+  Shield,
+  ImageIcon,
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
