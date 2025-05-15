@@ -78,24 +78,26 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         if (!response.ok) {
           let descriptiveError = `Error fetching spec via proxy: ${response.status} ${response.statusText}`;
           try {
-            const errorJson = JSON.parse(responseBodyText);
+            const errorJson = JSON.parse(responseBodyText); // Try to parse as JSON first
             if (errorJson && errorJson.error) {
                descriptiveError = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
-            } else if (errorJson && errorJson.message) { 
+            } else if (errorJson && errorJson.message) { // Some APIs might return { message: ... }
                descriptiveError = typeof errorJson.message === 'string' ? errorJson.message : JSON.stringify(errorJson.message);
-            } else {
-              descriptiveError = `Proxy API returned an invalid error format (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
+            } else { // If not standard JSON error, use the text content if available
+               descriptiveError = `External server returned status ${response.status} with unexpected content.`;
             }
-          } catch (e) {
+          } catch (e) { // If parsing responseBodyText as JSON fails
              if (responseBodyText.toLowerCase().includes("<html")) {
                descriptiveError = `Failed to fetch spec. External server at ${data.url} returned an HTML page (status ${response.status} ${response.statusText}). This could be an error page or authentication prompt.`;
              } else {
                descriptiveError = `Failed to fetch spec. External server at ${data.url} returned status ${response.status} ${response.statusText} with unexpected content. Preview (first 100 chars): ${responseBodyText.substring(0, 100)}...`;
              }
           }
+          
           throw new Error(descriptiveError);
         }
         
+        // If response.ok, parse the already read responseBodyText
         const result = JSON.parse(responseBodyText); 
         
         if (result.error) { 
@@ -104,13 +106,13 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         
         specObject = result.specObject as OpenAPI.Document;
         rawSpecText = result.rawSpecText;
-        wasVersionOverridden = result.versionOverridden || false;
+        wasVersionOverridden = result.versionOverridden || false; // Get override status from proxy
         inputFileName = data.url.substring(data.url.lastIndexOf('/') + 1) || "openapi-spec-from-url";
 
       } else { // type === "file"
         const file = data.file![0]; 
         inputFileName = file.name;
-        const fileContentText = await file.text();
+        const fileContentText = await file.text(); // rawSpecText for file case was not being set before.
         
         let parsedContentForFile: any; 
         if (inputFileName.endsWith(".yaml") || inputFileName.endsWith(".yml")) {
@@ -119,7 +121,7 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
           parsedContentForFile = JSON.parse(fileContentText);
         }
         
-        const originalVersionFromFile = parsedContentForFile.openapi;
+        const originalVersionFromFile = parsedContentForFile.openapi; // Capture original version for toast
 
         if (parsedContentForFile.openapi && typeof parsedContentForFile.openapi === 'string' && 
             parsedContentForFile.openapi.startsWith('3.0.') && parsedContentForFile.openapi > '3.0.3') {
@@ -129,16 +131,19 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         }
 
         try {
-          const specToBundle = JSON.parse(JSON.stringify(parsedContentForFile));
+          // Use parsedContentForFile for bundling as it might have the version override
+          const specToBundle = JSON.parse(JSON.stringify(parsedContentForFile)); 
           specObject = (await SwaggerParser.bundle(specToBundle)) as OpenAPI.Document;
         } catch (bundleError: any) {
+            // If override happened and bundling still failed, mention it
             if (wasVersionOverridden) {
                  throw new Error(`Failed to bundle after overriding file version from ${originalVersionFromFile} to 3.0.3: ${bundleError.message}`);
             }
-            throw bundleError; 
+            throw bundleError; // Re-throw original error if no override or override didn't help
         }
-        rawSpecText = YAML.dump(specObject); 
+        rawSpecText = YAML.dump(specObject); // Ensure rawSpecText is set for file uploads too
 
+        // Toast for version override (file upload)
         if (wasVersionOverridden) {
           toast({
             title: "Version Override (File)",
