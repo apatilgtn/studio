@@ -56,6 +56,7 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
     let specObject: OpenAPI.Document;
     let rawSpecText: string;
     let inputFileName: string;
+    let wasVersionOverridden = false;
 
     if (typeof window === 'undefined' && data.type === 'file') {
       setError("File upload can only be performed in the browser.");
@@ -75,20 +76,24 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         const responseBodyText = await response.text(); 
 
         if (!response.ok) {
-          let descriptiveError = `Failed to fetch from URL ${data.url}: ${response.status} ${response.statusText}`; // Default
+          let descriptiveError = `Error fetching spec via proxy: ${response.status} ${response.statusText}`;
           try {
-            const errorResult = JSON.parse(responseBodyText); // responseBodyText is from our /api/fetch-spec
-            if (errorResult && typeof errorResult.error === 'string') {
-              descriptiveError = errorResult.error; // Use the specific error message from our API
-            } else {
-               // Our /api/fetch-spec returned ok:false but not the expected { error: "..." } JSON structure.
-              descriptiveError = `Proxy API returned an unexpected error structure (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
+            const errorJson = JSON.parse(responseBodyText); // Try to parse as JSON first
+            if (errorJson && errorJson.error) {
+               descriptiveError = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
+            } else if (errorJson && errorJson.message) { // Some APIs might return { message: ... }
+               descriptiveError = typeof errorJson.message === 'string' ? errorJson.message : JSON.stringify(errorJson.message);
+            } else { // If not standard JSON error, use the text content if available
+               descriptiveError = `External server returned status ${response.status} with unexpected content.`;
             }
-          } catch (parseError) {
-            // This means our /api/fetch-spec endpoint returned a non-JSON error response.
-             console.error("Proxy API returned non-JSON error:", responseBodyText);
-            descriptiveError = `Proxy API returned an invalid error format (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
+          } catch (e) { // If parsing responseBodyText as JSON fails
+             if (responseBodyText.toLowerCase().includes("<html")) {
+               descriptiveError = `Failed to fetch spec. External server at ${data.url} returned an HTML page (status ${response.status} ${response.statusText}). This could be an error page or authentication prompt.`;
+             } else {
+               descriptiveError = `Failed to fetch spec. External server at ${data.url} returned status ${response.status} ${response.statusText} with unexpected content. Preview (first 100 chars): ${responseBodyText.substring(0, 100)}...`;
+             }
           }
+          
           throw new Error(descriptiveError);
         }
         
@@ -101,40 +106,75 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         
         specObject = result.specObject as OpenAPI.Document;
         rawSpecText = result.rawSpecText;
+        wasVersionOverridden = result.versionOverridden || false; // Get override status from proxy
         inputFileName = data.url.substring(data.url.lastIndexOf('/') + 1) || "openapi-spec-from-url";
 
       } else { // type === "file"
         const file = data.file![0]; 
         inputFileName = file.name;
-        rawSpecText = await file.text();
+        const fileContentText = await file.text(); // rawSpecText for file case was not being set before.
         
-        let parsedContent;
+        let parsedContentForFile: any; 
         if (inputFileName.endsWith(".yaml") || inputFileName.endsWith(".yml")) {
-          parsedContent = YAML.load(rawSpecText);
-        } else { // Assume JSON for .json or other extensions
-          parsedContent = JSON.parse(rawSpecText);
+          parsedContentForFile = YAML.load(fileContentText);
+        } else { 
+          parsedContentForFile = JSON.parse(fileContentText);
         }
         
-        // SwaggerParser.bundle can also dereference, which is good.
-        // Ensure parsedContent is a plain JS object for SwaggerParser
-        const specToBundle = JSON.parse(JSON.stringify(parsedContent));
-        specObject = (await SwaggerParser.bundle(specToBundle)) as OpenAPI.Document; 
-        // Ensure rawSpecText is YAML for consistent storage/display if desired, or keep original rawSpecText
-        rawSpecText = YAML.dump(specObject); // Convert bundled/validated spec back to YAML
+        const originalVersionFromFile = parsedContentForFile.openapi; // Capture original version for toast
+
+        if (parsedContentForFile.openapi && typeof parsedContentForFile.openapi === 'string' && 
+            parsedContentForFile.openapi.startsWith('3.0.') && parsedContentForFile.openapi > '3.0.3') {
+            console.warn(`Attempting to override OpenAPI version from ${originalVersionFromFile} to 3.0.3 for file upload.`);
+            parsedContentForFile.openapi = '3.0.3';
+            wasVersionOverridden = true;
+        }
+
+        try {
+          // Use parsedContentForFile for bundling as it might have the version override
+          const specToBundle = JSON.parse(JSON.stringify(parsedContentForFile)); 
+          specObject = (await SwaggerParser.bundle(specToBundle)) as OpenAPI.Document;
+        } catch (bundleError: any) {
+            // If override happened and bundling still failed, mention it
+            if (wasVersionOverridden) {
+                 throw new Error(`Failed to bundle after overriding file version from ${originalVersionFromFile} to 3.0.3: ${bundleError.message}`);
+            }
+            throw bundleError; // Re-throw original error if no override or override didn't help
+        }
+        rawSpecText = YAML.dump(specObject); // Ensure rawSpecText is set for file uploads too
+
+        // Toast for version override (file upload)
+        if (wasVersionOverridden) {
+          toast({
+            title: "Version Override (File)",
+            description: `OpenAPI version ${originalVersionFromFile} in your file was changed to 3.0.3 for compatibility. Full parsing not guaranteed.`,
+            variant: "default", 
+            duration: 8000,
+          });
+        }
       }
       
       setSpec({
         specObject,
         rawSpecText,
         name: inputFileName,
-        id: `temp-${Date.now()}`, // Temporary ID as it's not persisted
+        id: `temp-${Date.now()}`, 
       });
 
-      toast({
-        title: "Success",
-        description: `OpenAPI spec "${inputFileName}" loaded and validated.`,
-        variant: "default",
-      });
+      if (wasVersionOverridden && data.type === 'url') {
+         toast({
+            title: "Success & Version Override (URL)",
+            description: `OpenAPI spec "${inputFileName}" loaded. Its original version was changed to 3.0.3 for compatibility. Full parsing not guaranteed.`,
+            variant: "default",
+            duration: 8000,
+          });
+      } else if (!wasVersionOverridden) { 
+         toast({
+            title: "Success",
+            description: `OpenAPI spec "${inputFileName}" loaded and validated.`,
+            variant: "default",
+          });
+      }
       
       if (onSpecLoaded) {
         onSpecLoaded(inputFileName);
@@ -157,10 +197,9 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
   
   const exampleSpecs = [
     {name: "Swagger Petstore (v2 JSON)", url: "https://petstore.swagger.io/v2/swagger.json"},
-    {name: "OpenAPI Petstore (v3 YAML)", url: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml"},
-    // Gitea might require auth or have CORS, so it's less reliable for a quick demo fetch via simple proxy.
-    // {name: "Gitea API (v1 JSON)", url: "https://try.gitea.io/swagger.v1.json"}, 
-    {name: "Public APIs (YAML)", url: "https://api.apis.guru/v2/specs/apis.guru/2.2.0/openapi.yaml"}
+    {name: "Guru API (v1 JSON)", url: "https://api.getguru.com/api/v1/openapi.json"},
+    {name: "Kubernetes API (v1.29.0, v3 JSON)", url: "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.29.0/api/openapi-spec/v3/api.json"},
+    {name: "Petstore OpenAPI v3 (YAML)", url: "https://petstore3.swagger.io/api/v3/openapi.yaml"} 
   ];
 
 
@@ -218,13 +257,13 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
                                 {exampleSpecs.map(spec => (
                                     <Button 
                                         key={spec.url} 
-                                        type="button" // Prevents form submission
+                                        type="button" 
                                         variant="outline" 
                                         size="sm" 
                                         className="text-xs"
                                         onClick={() => {
                                           form.setValue("url", spec.url);
-                                          form.clearErrors("url"); // Clear error if any
+                                          form.clearErrors("url"); 
                                         }}
                                     >
                                         {spec.name}

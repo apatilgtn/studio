@@ -25,16 +25,16 @@ import {
   PlusCircle,
   Trash2,
   Network,
-  ArrowRightCircle,
+  ArrowRightCircle, 
   Edit3,
   Edit,
-  Home, 
+  Home,
   ListChecks,
-  FilePlus2, 
-  FileOutput,  
-  Activity,    
-  HeartPulse,  
-  ShieldCheck, 
+  FilePlus2,
+  FileOutput,
+  Activity,
+  HeartPulse,
+  ShieldCheck,
   Gavel,
   LogIn,
   LogOut,
@@ -56,9 +56,24 @@ import {
   TrendingUp, // For Predictive Monitoring
   Webhook, // Alternative for discovery or events
   LocateFixed, // Alternative for discovery
-  // ServerSearch, // Alternative for discovery - REMOVED as it does not exist
   BrainCircuit, // Alternative for predictive/AI
   Gauge, // Alternative for monitoring/predictive
+  User, 
+  ShoppingCart, 
+  ArrowDown,
+  Database,
+  Shield,
+  ImageIcon,
+  KeyRound, // For OAuth
+  List, // For Pagination
+  ArrowLeft, // For Content Negotiation
+  ServerCog, // For Admin Settings
+  Link2, // For Admin Integrations
+  Rocket, // For Getting Started
+  Layers, // For API Discovery (alternative)
+  Blend, // For Pattern Intelligence (alternative)
+  BarChartHorizontal, // For Analytics
+  Landmark // For Governance
 } from 'lucide-react';
 
 export const Icons = {
@@ -87,7 +102,8 @@ export const Icons = {
   HttpPost: PlusCircle,
   HttpDelete: Trash2,
   HttpPatch: Edit,
-  HttpGet: ArrowRightCircle, 
+  HttpGet: ArrowRightCircle,
+  ArrowRightCircle, 
   Network,
   Home,
   ListChecks,
@@ -111,15 +127,30 @@ export const Icons = {
   PlayCircle,
   RefreshCw,
   Maximize,
-  Palette,
+  Palette, 
   Search,
   Radar,
   TrendingUp,
   Webhook,
   LocateFixed,
-  // ServerSearch, // REMOVED
   BrainCircuit,
   Gauge,
+  User,
+  ShoppingCart,
+  ArrowDown,
+  Database,
+  Shield,
+  ImageIcon,
+  KeyRound,
+  List,
+  ArrowLeft,
+  ServerCog,
+  Link2,
+  Rocket,
+  Layers,
+  Blend,
+  BarChartHorizontal,
+  Landmark
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
@@ -132,4 +163,3 @@ export const ApiMethodIcons: Record<string, React.ElementType> = {
   head: Icons.Eye,
   trace: Icons.GitFork,
 };
-
