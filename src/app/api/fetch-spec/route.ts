@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URL is required and must be a string' }, { status: 400 });
     }
 
-    let parsedSpec: any; // Use 'any' to allow modification of openapi property
+    let parsedSpec: any; 
     let rawSpecTextForOutput: string;
 
     const externalResponse = await fetch(specUrl);
@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check and override OpenAPI version if necessary
     if (parsedSpec.openapi && typeof parsedSpec.openapi === 'string' && parsedSpec.openapi > '3.0.3' && parsedSpec.openapi.startsWith('3.0.')) {
         console.warn(`Attempting to override OpenAPI version from ${parsedSpec.openapi} to 3.0.3 for URL: ${specUrl}`);
         parsedSpec.openapi = '3.0.3';
@@ -78,7 +77,6 @@ export async function POST(request: NextRequest) {
       const specToValidate = JSON.parse(JSON.stringify(parsedSpec)); 
       validatedSpecToReturn = await SwaggerParser.validate(specToValidate) as OpenAPI.Document;
     } catch (validationError: any) {
-      // If primary validation fails, and we haven't already overridden, and it's an unsupported version error for 3.0.x > 3.0.3
       if (!versionOverridden && validationError.message && validationError.message.includes("Unsupported OpenAPI version")) {
         const openApiVersionMatch = validationError.message.match(/Unsupported OpenAPI version: (3\.0\.\d+)/);
         if (openApiVersionMatch && openApiVersionMatch[1] > '3.0.3') {
@@ -92,10 +90,10 @@ export async function POST(request: NextRequest) {
             throw new Error(`Failed to validate spec from ${specUrl} even after overriding version to 3.0.3: ${secondValidationError.message}`);
           }
         } else {
-          throw validationError; // Re-throw if not the specific unsupported 3.0.x version we handle
+          throw validationError; 
         }
       } else {
-        throw validationError; // Re-throw other validation errors or if already tried override
+        throw validationError; 
       }
     }
     
@@ -104,18 +102,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ specObject: validatedSpecToReturn, rawSpecText: rawSpecTextForOutput, versionOverridden });
 
   } catch (error: any) {
-    console.error(`Error in fetch-spec proxy for URL: ${specUrl || 'Unknown URL provided in request'}. Details:`, error.message, error.stack);
-    // Ensure a user-friendly message. Error.message might be too technical or include stack traces from SwaggerParser.
-    let friendlyMessage = "An unexpected error occurred while fetching or parsing the specification.";
+    let errorContext = '';
     if (error.message) {
-        if (error.message.includes("Unsupported OpenAPI version")) {
-            friendlyMessage = error.message; // This is usually a clear message from SwaggerParser
-        } else if (error.message.includes("Failed to validate spec")) {
-            friendlyMessage = `The specification from ${specUrl} has validation errors. ${error.message}`;
-        } else if (error.message.startsWith("Failed to parse specification") || error.message.startsWith("Request to") || error.message.startsWith("External server")) {
-            friendlyMessage = error.message; // These are our custom, more friendly messages
+      errorContext = error.message;
+    } else if (error.name) {
+      errorContext = error.name;
+    } else {
+      try {
+        errorContext = JSON.stringify(error);
+      } catch (e) {
+        errorContext = String(error);
+      }
+    }
+    
+    console.error(`Error in fetch-spec proxy for URL: ${specUrl || 'Unknown URL provided in request'}. Details:`, errorContext, error.stack);
+    
+    let friendlyMessage = `An error occurred while processing the specification from ${specUrl || 'the provided URL'}.`;
+
+    if (errorContext) {
+        if (errorContext.includes("Unsupported OpenAPI version")) {
+            friendlyMessage = errorContext; 
+        } else if (errorContext.includes("Failed to validate spec") || errorContext.startsWith("Failed to parse specification") || errorContext.startsWith("Request to") || errorContext.startsWith("External server")) {
+            friendlyMessage = errorContext; 
+        } else {
+            // For other errors, provide a snippet of the error context
+            friendlyMessage = `Error processing specification: ${errorContext.substring(0, 200)}${errorContext.length > 200 ? '...' : ''}`;
         }
     }
-    return NextResponse.json({ error: friendlyMessage, fullError: error.message, stack: error.stack }, { status: 500 });
+    
+    return NextResponse.json({ error: friendlyMessage, fullError: errorContext, stack: error.stack }, { status: 500 });
   }
 }
