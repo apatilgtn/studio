@@ -9,5 +9,9 @@ export const GenerateApiDocumentationInputSchema = z.object({
     .string()
     .optional()
     .describe('An optional partial OpenAPI specification (YAML or JSON string) to be completed or enhanced.'),
+  sourceCodeSnippets: z
+    .string()
+    .optional()
+    .describe('Optional source code snippets (e.g., route definitions, controller methods, data models) to help the AI understand the API structure.'),
 });
 export type GenerateApiDocumentationInput = z.infer<typeof GenerateApiDocumentationInputSchema>;

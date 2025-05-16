@@ -35,7 +35,7 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateApiDocumentationInputSchema},
   output: {schema: GenerateApiDocumentationOutputSchema},
   prompt: `You are an expert API designer tasked with generating OpenAPI 3.0.x specifications.
-Based on the following description (and optional partial specification), generate a complete OpenAPI 3.0.x specification in YAML format.
+Based on the following description (and optional partial specification, and optional source code snippets), generate a complete OpenAPI 3.0.x specification in YAML format.
 Identify potential endpoints, request/response schemas (including data types like string, integer, boolean, object, array), and appropriate HTTP methods (GET, POST, PUT, DELETE, PATCH).
 Ensure the generated specification is well-structured and follows OpenAPI best practices.
 Include basic request and response examples where appropriate.
@@ -47,7 +47,16 @@ Description:
 
 {{#if partialSpec}}
 Partial Specification (to be completed or enhanced):
+\`\`\`
 {{{partialSpec}}}
+\`\`\`
+{{/if}}
+
+{{#if sourceCodeSnippets}}
+Source Code Snippets (analyze these for API structure, endpoints, data models):
+\`\`\`
+{{{sourceCodeSnippets}}}
+\`\`\`
 {{/if}}
 
 Focus on creating a functional and comprehensive specification. If the description is vague, make reasonable assumptions but note them in the suggestions.

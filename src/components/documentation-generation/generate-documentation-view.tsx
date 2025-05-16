@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge"; // Added import for Badge
+import { Badge } from "@/components/ui/badge";
 
 export function GenerateDocumentationView() {
   const [generationResult, setGenerationResult] = useState<GenerateApiDocumentationOutput | null>(null);
@@ -27,6 +27,7 @@ export function GenerateDocumentationView() {
     defaultValues: {
       description: "",
       partialSpec: "",
+      sourceCodeSnippets: "",
     },
   });
 
@@ -64,7 +65,7 @@ export function GenerateDocumentationView() {
             <Icons.FilePlus2 className="w-6 h-6 text-primary" /> AI-Powered API Documentation Generator
           </CardTitle>
           <CardDescription>
-            Provide a natural language description of your API, or a partial OpenAPI spec, and let AI generate a full OpenAPI 3.0.x specification for you.
+            Provide a natural language description of your API, a partial OpenAPI spec, and/or relevant source code snippets. The AI will generate a full OpenAPI 3.0.x specification for you.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,6 +106,26 @@ export function GenerateDocumentationView() {
                     </FormControl>
                     <FormDescription>
                       Provide a starting point if you have one.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sourceCodeSnippets"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Source Code Snippets (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Paste relevant source code snippets here (e.g., route definitions, controller methods, data models). The AI will analyze these for API structure."
+                        className="min-h-[150px] font-mono text-xs"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Helps the AI understand your API structure if formal documentation is lacking.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
