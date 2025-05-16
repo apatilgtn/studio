@@ -4,13 +4,14 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import * as z from "zod"; // Added Zod import
 import { GenerateApiDocumentationInputSchema, type GenerateApiDocumentationInput } from "@/ai/schemas/api-documentation-schemas";
 import { generateApiDocumentation, type GenerateApiDocumentationOutput } from "@/ai/flows/api-documentation-generation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input"; // Added Input import
+import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -152,16 +153,16 @@ export function GenerateDocumentationView() {
                       <Input
                         type="file"
                         multiple // Allow multiple files
-                        accept=".js,.ts,.py,.java,.cs,.go,.rb,.php,text/plain,.txt" // Common code extensions
+                        accept=".js,.ts,.py,.java,.cs,.go,.rb,.php,text/plain,.txt,.mjs,.cjs,.jsx,.tsx" // Common code extensions
                         onChange={(e) => onChange(e.target.files)}
                         onBlur={onBlur}
                         name={name}
                         ref={ref}
-                        className="pt-2"
+                        className="pt-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                       />
                     </FormControl>
                     <FormDescription>
-                      Upload relevant source code files (e.g., route definitions, controllers, data models). The AI will analyze their content. This is not full repository analysis.
+                      Upload relevant source code files (e.g., route definitions, controllers, data models). The AI will analyze their content.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
