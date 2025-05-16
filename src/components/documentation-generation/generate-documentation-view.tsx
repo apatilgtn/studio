@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input"; // Added Input import
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,28 +18,57 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
+// Form schema for the client-side form, including file handling
+const GenerateDocumentationClientFormSchema = GenerateApiDocumentationInputSchema.extend({
+  sourceCodeFiles: z.custom<FileList>().optional(), // For file input
+}).omit({ sourceCodeSnippets: true }); // Remove the old snippets field from form schema
+
+type GenerateDocumentationClientFormValues = z.infer<typeof GenerateDocumentationClientFormSchema>;
+
 export function GenerateDocumentationView() {
   const [generationResult, setGenerationResult] = useState<GenerateApiDocumentationOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const form = useForm<GenerateApiDocumentationInput>({
-    resolver: zodResolver(GenerateApiDocumentationInputSchema),
+  const form = useForm<GenerateDocumentationClientFormValues>({
+    resolver: zodResolver(GenerateDocumentationClientFormSchema),
     defaultValues: {
       description: "",
       partialSpec: "",
-      sourceCodeSnippets: "",
+      sourceCodeFiles: undefined,
     },
   });
 
-  const onSubmit = async (data: GenerateApiDocumentationInput) => {
+  const onSubmit = async (data: GenerateDocumentationClientFormValues) => {
     setIsLoading(true);
     setError(null);
     setGenerationResult(null);
 
+    let sourceCodeText = "";
+    if (data.sourceCodeFiles && data.sourceCodeFiles.length > 0) {
+      try {
+        const fileContents = await Promise.all(
+          Array.from(data.sourceCodeFiles).map(file => file.text())
+        );
+        sourceCodeText = fileContents.join("\n\n---\n\n"); // Concatenate file contents
+      } catch (e) {
+        console.error("Error reading file(s):", e);
+        setError("Could not read the uploaded source code file(s).");
+        setIsLoading(false);
+        toast({ title: "File Read Error", description: "Failed to read the content of uploaded files.", variant: "destructive" });
+        return;
+      }
+    }
+
+    const aiInput: GenerateApiDocumentationInput = {
+      description: data.description,
+      partialSpec: data.partialSpec,
+      sourceCodeSnippets: sourceCodeText, // Pass concatenated text to AI
+    };
+
     try {
-      const result = await generateApiDocumentation(data);
+      const result = await generateApiDocumentation(aiInput);
       setGenerationResult(result);
       toast({
         title: "Documentation Generation Complete",
@@ -65,7 +96,7 @@ export function GenerateDocumentationView() {
             <Icons.FilePlus2 className="w-6 h-6 text-primary" /> AI-Powered API Documentation Generator
           </CardTitle>
           <CardDescription>
-            Provide a natural language description of your API, a partial OpenAPI spec, and/or relevant source code snippets. The AI will generate a full OpenAPI 3.0.x specification for you.
+            Provide a natural language description of your API, a partial OpenAPI spec, and/or upload relevant source code files (e.g., route definitions, controllers, data models). The AI will attempt to generate a full OpenAPI 3.0.x specification.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,19 +144,24 @@ export function GenerateDocumentationView() {
               />
               <FormField
                 control={form.control}
-                name="sourceCodeSnippets"
-                render={({ field }) => (
+                name="sourceCodeFiles"
+                render={({ field: { onChange, onBlur, name, ref } }) => (
                   <FormItem>
-                    <FormLabel>Source Code Snippets (Optional)</FormLabel>
+                    <FormLabel>Upload Source Code Files (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Paste relevant source code snippets here (e.g., route definitions, controller methods, data models). The AI will analyze these for API structure."
-                        className="min-h-[150px] font-mono text-xs"
-                        {...field}
+                      <Input
+                        type="file"
+                        multiple // Allow multiple files
+                        accept=".js,.ts,.py,.java,.cs,.go,.rb,.php,text/plain,.txt" // Common code extensions
+                        onChange={(e) => onChange(e.target.files)}
+                        onBlur={onBlur}
+                        name={name}
+                        ref={ref}
+                        className="pt-2"
                       />
                     </FormControl>
                     <FormDescription>
-                      Helps the AI understand your API structure if formal documentation is lacking.
+                      Upload relevant source code files (e.g., route definitions, controllers, data models). The AI will analyze their content. This is not full repository analysis.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
