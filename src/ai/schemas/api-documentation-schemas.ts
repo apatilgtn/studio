@@ -1,9 +1,10 @@
+
 import { z } from 'zod';
 
 export const GenerateApiDocumentationInputSchema = z.object({
   description: z
     .string()
-    .min(50, { message: "Description must be at least 50 characters long."})
+    // .min(50, { message: "Description must be at least 50 characters long."}) // Removed minimum length constraint
     .describe('A natural language description of the API, its purpose, and its intended endpoints/functionality.'),
   partialSpec: z
     .string()
@@ -12,6 +13,7 @@ export const GenerateApiDocumentationInputSchema = z.object({
   sourceCodeSnippets: z
     .string()
     .optional()
-    .describe('Optional source code snippets (e.g., route definitions, controller methods, data models) to help the AI understand the API structure.'),
+    .describe('Optional source code snippets (e.g., route definitions, controller methods, data models) to help the AI understand the API structure. This may come from uploaded files.'),
 });
 export type GenerateApiDocumentationInput = z.infer<typeof GenerateApiDocumentationInputSchema>;
+
