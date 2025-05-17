@@ -20,9 +20,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { useRouter } from "next/navigation"; // Import useRouter
 
 interface DiscoveredApi {
   id: string;
@@ -34,8 +34,8 @@ interface DiscoveredApi {
   security: "high" | "medium" | "low";
   isUndocumented: boolean;
   lastScanned: string;
-  issuesFound: number; // Derived from status for mock
-  recommendations: string[]; // Mock recommendations
+  issuesFound: number; 
+  recommendations: string[]; 
 }
 
 interface AnalysisIssue {
@@ -43,14 +43,14 @@ interface AnalysisIssue {
   type: "Security" | "Performance" | "Documentation" | "Reliability" | "Other";
   severity: "High" | "Medium" | "Low";
   description: string;
-  path?: string; // e.g. specific endpoint or schema
+  path?: string; 
 }
 
 interface AnalysisRecommendation {
   id: string;
   recommendation: string;
   priority: "High" | "Medium" | "Low";
-  benefit: string; // e.g., "Improved Security", "Reduced Latency"
+  benefit: string; 
 }
 
 interface ApiAnalysisDetails {
@@ -84,8 +84,12 @@ const generateMockApis = (count = 100): DiscoveredApi[] => {
     const method = methods[i % methods.length];
     const status = statuses[i % statuses.length];
     const security = securities[i % securities.length];
-    const isUndocumented = Math.random() < 0.2;
-    const issues = status === "critical" ? Math.floor(Math.random() * 3) + 2 : status === "warning" ? Math.floor(Math.random() * 2) + 1 : 0;
+    const isUndocumented = Math.random() < 0.3; // Increased chance for demo
+    let issues = 0;
+    if (status === "critical") issues += Math.floor(Math.random() * 2) + 1;
+    if (status === "warning") issues += 1;
+    if (security === "low") issues += 1;
+    if (isUndocumented) issues +=1;
     
     return {
       id: `api-${i}`,
@@ -162,8 +166,9 @@ export function APIDiscoveryScannerView() {
   const [isLoading, setIsLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [issuesDetected, setIssuesDetected] = useState(0);
-  const [recommendationsCount, setRecommendationsCount] = useState(0); // This will be mock
+  const [recommendationsCount, setRecommendationsCount] = useState(0); 
   const { toast } = useToast();
+  const router = useRouter();
 
   const [selectedApiForAnalysis, setSelectedApiForAnalysis] = useState<DiscoveredApi | null>(null);
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
@@ -187,19 +192,43 @@ export function APIDiscoveryScannerView() {
 
     const detectedIssues = mockData.reduce((acc, api) => acc + api.issuesFound, 0);
     setIssuesDetected(detectedIssues);
-    // For mock recommendations, let's say each issue has 1-2 recommendations.
-    setRecommendationsCount(Math.floor(detectedIssues * 1.5)); 
+    setRecommendationsCount(Math.floor(detectedIssues * 1.2) + mockData.length); // Each API gets at least one rec
     
     setIsLoading(false);
     toast({
       title: "API Scan Complete",
-      description: `${mockData.length} APIs discovered and analyzed. ${detectedIssues} potential issues found.`,
+      description: `${mockData.length} APIs discovered. ${detectedIssues} potential issues found.`,
     });
   };
   
   const handleAnalyzeApi = (api: DiscoveredApi) => {
     setSelectedApiForAnalysis(api);
     setIsAnalysisModalOpen(true);
+  };
+
+  const handleGenerateDoc = (apiId: string) => {
+    const apiToDoc = discoveredApis.find(api => api.id === apiId);
+    if (apiToDoc) {
+      const redirectUrl = `/generate-documentation?apiName=${encodeURIComponent(apiToDoc.name)}&endpoint=${encodeURIComponent(apiToDoc.endpoint)}&method=${encodeURIComponent(apiToDoc.method)}`;
+      
+      // Client-side update for immediate visual feedback
+      setDiscoveredApis(prevApis => 
+        prevApis.map(api => 
+          api.id === apiId 
+            ? { ...api, isUndocumented: false, issuesFound: Math.max(0, api.issuesFound -1) } // Decrement issues if undocumented was one
+            : api
+        )
+      );
+      // Update overall issues count based on the change
+      setIssuesDetected(prevCount => Math.max(0, prevCount -1));
+
+
+      toast({
+        title: "Redirecting to Generate Documentation",
+        description: `Pre-filling context for ${apiToDoc.name}. API marked as 'documented' in this view.`,
+      });
+      router.push(redirectUrl);
+    }
   };
 
   const getStatusColor = (status: DiscoveredApi["status"]) => {
@@ -327,7 +356,7 @@ export function APIDiscoveryScannerView() {
                     <TableHead className="w-[90px]">Security</TableHead>
                     <TableHead className="w-[80px] text-center">Undoc'd</TableHead>
                     <TableHead className="w-[140px]">Last Scanned</TableHead>
-                    <TableHead className="w-[100px] text-right">Actions</TableHead>
+                    <TableHead className="w-[180px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -352,13 +381,18 @@ export function APIDiscoveryScannerView() {
                         </Badge>
                       </TableCell>
                        <TableCell className="text-center">
-                        {api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" /> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" />}
+                        {api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" title="Undocumented API"/> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" title="Documented"/>}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{api.lastScanned}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-1">
                         <Button variant="ghost" size="sm" onClick={() => handleAnalyzeApi(api)}>
                           <Icons.Search className="w-4 h-4 mr-1" /> Analyze
                         </Button>
+                        {api.isUndocumented && (
+                          <Button variant="outline" size="sm" onClick={() => handleGenerateDoc(api.id)}>
+                            <Icons.FilePlus2 className="w-4 h-4 mr-1" /> Generate Doc
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -477,4 +511,3 @@ export function APIDiscoveryScannerView() {
     </div>
   );
 }
-
