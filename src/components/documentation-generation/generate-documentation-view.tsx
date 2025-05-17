@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { GenerateApiDocumentationInputSchema, type GenerateApiDocumentationInput, type GenerateApiDocumentationOutput } from "@/ai/schemas/api-documentation-schemas";
+import { type GenerateApiDocumentationOutput, type GenerateApiDocumentationInput } from "@/ai/schemas/api-documentation-schemas"; // Import types directly
+import { GenerateApiDocumentationInputSchema } from "@/ai/schemas/api-documentation-schemas"; // Import schema
 import { generateApiDocumentation } from "@/ai/flows/api-documentation-generation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,12 +20,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useSearchParams } from 'next/navigation';
 
 
 // Form schema for the client-side form, including file handling
 const GenerateDocumentationClientFormSchema = GenerateApiDocumentationInputSchema.extend({
-  sourceCodeFiles: z.custom<FileList>().optional(), // For file input
-}).omit({ sourceCodeSnippets: true }); // Remove the old snippets field from form schema
+  sourceCodeFiles: z.custom<FileList>().optional(), 
+}).omit({ sourceCodeSnippets: true }); 
 
 type GenerateDocumentationClientFormValues = z.infer<typeof GenerateDocumentationClientFormSchema>;
 
@@ -33,6 +35,7 @@ export function GenerateDocumentationView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const form = useForm<GenerateDocumentationClientFormValues>({
     resolver: zodResolver(GenerateDocumentationClientFormSchema),
@@ -42,6 +45,32 @@ export function GenerateDocumentationView() {
       sourceCodeFiles: undefined,
     },
   });
+
+  useEffect(() => {
+    const apiName = searchParams.get('apiName');
+    const endpoint = searchParams.get('endpoint');
+    const method = searchParams.get('method');
+
+    if (apiName && endpoint && method) {
+      const prefillText = `The following API, named "${decodeURIComponent(apiName)}", was discovered and is currently undocumented:
+- Method: ${decodeURIComponent(method)}
+- Endpoint: ${decodeURIComponent(endpoint)}
+
+Please describe its purpose, main resources, expected request/response structures, and any key data models involved to help generate its OpenAPI specification.
+For example:
+- What does this API do?
+- What data does it accept?
+- What data does it return?
+- Are there any specific data types or formats to be aware of?
+`;
+      form.setValue('description', prefillText);
+      toast({
+        title: "Context Pre-filled",
+        description: `Description started for API: ${decodeURIComponent(apiName)}. Please elaborate.`,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, form.setValue, toast]); // form.setValue and toast are stable
 
   const onSubmit = async (data: GenerateDocumentationClientFormValues) => {
     setIsLoading(true);
@@ -54,7 +83,7 @@ export function GenerateDocumentationView() {
         const fileContents = await Promise.all(
           Array.from(data.sourceCodeFiles).map(file => file.text())
         );
-        sourceCodeText = fileContents.join("\n\n---\n\n"); // Concatenate file contents
+        sourceCodeText = fileContents.join("\n\n---\n\n"); 
       } catch (e) {
         console.error("Error reading file(s):", e);
         setError("Could not read the uploaded source code file(s).");
@@ -99,7 +128,9 @@ export function GenerateDocumentationView() {
             <Icons.FilePlus2 className="w-6 h-6 text-primary" /> AI-Powered API Documentation Generator
           </CardTitle>
           <CardDescription>
-            Provide a natural language description, a partial OpenAPI spec, and/or upload relevant source code files (e.g., route definitions, controllers, data models). The AI will attempt to generate OpenAPI 3.0.x specification(s).
+            The AI uses your description, any partial OpenAPI spec you provide, and uploaded source code files to generate OpenAPI 3.0.x specifications.
+            It analyzes the text for API purpose, endpoints, methods, data structures, and infers relationships from code patterns.
+            If multiple distinct APIs are described or implied by the code, it will attempt to create separate specifications.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -118,9 +149,6 @@ export function GenerateDocumentationView() {
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      This is the primary input for the AI to understand your API(s).
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -154,8 +182,8 @@ export function GenerateDocumentationView() {
                     <FormControl>
                       <Input
                         type="file"
-                        multiple // Allow multiple files
-                        accept=".js,.ts,.py,.java,.cs,.go,.rb,.php,text/plain,.txt,.mjs,.cjs,.jsx,.tsx,.json,.yaml,.yml"
+                        multiple 
+                        accept=".js,.ts,.py,.java,.cs,.go,.rb,.php,text/plain,.txt,.mjs,.cjs,.jsx,.tsx,.json,.yaml,.yml,.md"
                         onChange={(e) => onChange(e.target.files)}
                         onBlur={onBlur}
                         name={name}
@@ -164,7 +192,7 @@ export function GenerateDocumentationView() {
                       />
                     </FormControl>
                     <FormDescription>
-                      Upload relevant source code files. If these files cover multiple distinct APIs, the AI will attempt to generate separate specs.
+                      Upload relevant source files (e.g., route definitions, controllers, data models). If files represent multiple APIs, the AI will attempt to create separate specs.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -254,7 +282,7 @@ export function GenerateDocumentationView() {
                             toast({ title: "Copied to clipboard!", description: `${specItem.apiName || 'Generated API'} YAML copied.` });
                           }}
                         >
-                          <Icons.FileText className="mr-2 h-4 w-4" /> Copy YAML for {specItem.apiName || `API ${index + 1}`}
+                          <Icons.Copy className="mr-2 h-4 w-4" /> Copy YAML for {specItem.apiName || `API ${index + 1}`}
                         </Button>
                      </AccordionContent>
                   </AccordionItem>
