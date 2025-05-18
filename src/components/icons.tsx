@@ -143,7 +143,6 @@ export const Icons = {
   TrendingUp, 
   Webhook, 
   LocateFixed, 
-  // ServerSearch, // This icon does not exist in lucide-react
   BrainCircuit, 
   Gauge, 
   User,
@@ -165,7 +164,7 @@ export const Icons = {
   ServerCrash,
   Copy,
   Save,
-  Trash2,
+  Trash2, // Ensure Trash2 is directly available
   Sun,
   Moon,
   Laptop,
