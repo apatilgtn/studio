@@ -191,13 +191,15 @@ export function APIDiscoveryScannerView() {
     setDiscoveredApis(mockData);
 
     const detectedIssues = mockData.reduce((acc, api) => acc + api.issuesFound, 0);
-    setIssuesDetected(detectedIssues);
-    setRecommendationsCount(Math.floor(detectedIssues * 1.2) + mockData.length); 
+    const undocumentedCount = mockData.filter(api => api.isUndocumented).length;
+    setIssuesDetected(detectedIssues + undocumentedCount); // Simplified issue count
+
+    setRecommendationsCount(Math.floor((detectedIssues + undocumentedCount) * 1.2) + mockData.length); 
     
     setIsLoading(false);
     toast({
       title: "API Scan Complete",
-      description: `${mockData.length} APIs discovered. ${detectedIssues} potential issues found.`,
+      description: `${mockData.length} APIs discovered. ${detectedIssues + undocumentedCount} potential issues found.`,
     });
   };
   
@@ -218,7 +220,12 @@ export function APIDiscoveryScannerView() {
             : api
         )
       );
-      setIssuesDetected(prevCount => Math.max(0, prevCount -1));
+      
+      const currentIssues = discoveredApis.find(api => api.id === apiId)?.issuesFound || 0;
+      if (apiToDoc.isUndocumented) { // Only decrement if it was actually undocumented
+         setIssuesDetected(prevCount => Math.max(0, prevCount -1));
+      }
+
 
       toast({
         title: "Redirecting to Generate Documentation",
@@ -255,7 +262,7 @@ export function APIDiscoveryScannerView() {
 
 
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-6 bg-secondary/30 min-h-screen"> {/* Reduced overall spacing slightly */}
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6 bg-secondary/30 min-h-screen">
       <header className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
           <Icons.Radar className="w-7 h-7 md:w-8 md:h-8 text-primary" />
@@ -269,7 +276,7 @@ export function APIDiscoveryScannerView() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
         <Card className="shadow-lg bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium">APIs Discovered</CardTitle> {/* Smaller title */}
+            <CardTitle className="text-xs font-medium">APIs Discovered</CardTitle>
             <Icons.Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -312,14 +319,14 @@ export function APIDiscoveryScannerView() {
       <Card className="shadow-xl bg-card">
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
             <div>
-                <CardTitle className="text-lg md:text-xl">Discovered API Inventory</CardTitle> {/* Smaller title */}
+                <CardTitle className="text-lg md:text-xl">Discovered API Inventory</CardTitle>
                 <CardDescription className="text-xs md:text-sm">List of APIs identified during the scan.</CardDescription>
             </div>
           <Button onClick={handleStartScan} disabled={isLoading} size="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
             {isLoading ? (
-              <Icons.Loader className="mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" />
+              <Icons.Loader className="mr-2 h-4 w-4 md:h-5 md:h-5 animate-spin" />
             ) : (
-              <Icons.PlayCircle className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+              <Icons.PlayCircle className="mr-2 h-4 w-4 md:h-5 md:h-5" />
             )}
             Start New Scan
           </Button>
@@ -334,7 +341,7 @@ export function APIDiscoveryScannerView() {
           {!isLoading && discoveredApis.length === 0 && (
             <Alert className="bg-background">
               <Icons.Info className="h-4 w-4" />
-              <AlertTitle className="text-sm md:text-base">No Scan Performed Yet</AlertTitle> {/* Smaller title */}
+              <AlertTitle className="text-sm md:text-base">No Scan Performed Yet</AlertTitle>
               <AlertDescription className="text-xs md:text-sm">
                 Click "Start New Scan" to discover APIs in your environment.
               </AlertDescription>
@@ -345,7 +352,7 @@ export function APIDiscoveryScannerView() {
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[180px] text-xs">Name</TableHead> {/* Smaller text */}
+                    <TableHead className="w-[180px] text-xs">Name</TableHead>
                     <TableHead className="min-w-[200px] text-xs">Endpoint</TableHead>
                     <TableHead className="w-[90px] text-xs">Method</TableHead>
                     <TableHead className="w-[100px] text-xs">Status</TableHead>
@@ -361,25 +368,11 @@ export function APIDiscoveryScannerView() {
                     <TableRow key={api.id} className="hover:bg-muted/30">
                       <TableCell className="font-medium text-foreground text-xs">{api.name}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{api.endpoint}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs method-badge-${api.method.toLowerCase()}`}>{api.method}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          className={`text-xs ${getStatusColor(api.status)} text-white`}
-                        >
-                            {api.status.charAt(0).toUpperCase() + api.status.slice(1)}
-                        </Badge>
-                      </TableCell>
+                      <TableCell><Badge variant="outline" className={`text-xs method-badge-${api.method.toLowerCase()}`}>{api.method}</Badge></TableCell>
+                      <TableCell><Badge className={`text-xs ${getStatusColor(api.status)} text-white`}>{api.status.charAt(0).toUpperCase() + api.status.slice(1)}</Badge></TableCell>
                       <TableCell className="text-xs">{api.responseTime} ms</TableCell>
-                      <TableCell>
-                        <Badge variant={getSecurityBadgeVariant(api.security)} className="capitalize text-xs">
-                          {api.security}
-                        </Badge>
-                      </TableCell>
-                       <TableCell className="text-center">
-                        {api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" title="Undocumented API"/> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" title="Documented"/>}
-                      </TableCell>
+                      <TableCell><Badge variant={getSecurityBadgeVariant(api.security)} className="capitalize text-xs">{api.security}</Badge></TableCell>
+                      <TableCell className="text-center">{api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" title="Undocumented API"/> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" title="Documented"/>}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{api.lastScanned}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button variant="ghost" size="sm" className="text-xs" onClick={() => handleAnalyzeApi(api)}>
@@ -402,7 +395,7 @@ export function APIDiscoveryScannerView() {
 
       {selectedApiForAnalysis && currentAnalysisDetails && (
         <AlertDialog open={isAnalysisModalOpen} onOpenChange={setIsAnalysisModalOpen}>
-          <AlertDialogContent className="max-w-xl md:max-w-2xl"> {/* Adjusted width */}
+          <AlertDialogContent className="max-w-xl md:max-w-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-lg md:text-xl flex items-center gap-2">
                 <Icons.ClipboardCheck className="w-5 h-5 md:w-6 md:h-6 text-primary" /> Analysis Report: {selectedApiForAnalysis.name}
@@ -508,3 +501,5 @@ export function APIDiscoveryScannerView() {
     </div>
   );
 }
+
+    
