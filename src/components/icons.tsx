@@ -23,7 +23,7 @@ import {
   Server,
   Replace,
   PlusCircle,
-  Trash2,
+  Trash2, // It is imported
   Network,
   ArrowRightCircle,
   Edit3,
@@ -78,7 +78,7 @@ import {
   Landmark,
   ServerCrash,
   Copy,
-  Save, // Added Save icon
+  Save,
 } from 'lucide-react';
 
 export const Icons = {
@@ -159,8 +159,9 @@ export const Icons = {
   BarChartHorizontal,
   Landmark,
   ServerCrash,
-  Copy, 
-  Save, // Added Save icon to export
+  Copy,
+  Save,
+  Trash2, // Added Trash2 here
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
