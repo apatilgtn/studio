@@ -12,7 +12,7 @@ import { MetricCard } from "./metric-card";
 import { SystemHealthItem } from "./system-health-item";
 import { AnomalyItem } from "./anomaly-item";
 import type { ChartConfig } from "@/components/ui/chart"; 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { OpenAPIV3, OpenAPIV2 } from 'openapi-types';
 import Image from 'next/image';
@@ -277,7 +277,7 @@ export function ApiDashboard() {
       <div className="p-6 md:p-8 space-y-6">
         <section className="bg-card shadow-xl rounded-xl p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="md:w-2/3">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Welcome to API Harmony</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Welcome to API Harmony Lite</h1>
             <p className="text-md md:text-lg text-muted-foreground mb-6">
               Your intelligent API orchestration engine. Import an OpenAPI spec to unlock powerful insights and management tools.
             </p>
@@ -288,7 +288,10 @@ export function ApiDashboard() {
             </Link>
           </div>
           <div className="md:w-1/3 flex justify-center items-center">
-            <Icons.Zap className="w-32 h-32 text-primary opacity-20" /> 
+            {/* Placeholder for a more engaging visual */}
+            <div className="p-4 rounded-full bg-primary/10">
+               <Icons.Zap className="w-32 h-32 text-primary" />
+            </div>
           </div>
         </section>
         <Alert>
@@ -505,3 +508,5 @@ export function ApiDashboard() {
     </div>
   );
 }
+
+    
