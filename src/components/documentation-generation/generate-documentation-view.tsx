@@ -5,8 +5,7 @@ import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { type GenerateApiDocumentationOutput, type GenerateApiDocumentationInput } from "@/ai/schemas/api-documentation-schemas"; // Import types directly
-import { GenerateApiDocumentationInputSchema } from "@/ai/schemas/api-documentation-schemas"; // Import schema
+import { type GenerateApiDocumentationOutput, type GenerateApiDocumentationInput, GeneratedApiSpecSchema } from "@/ai/schemas/api-documentation-schemas"; 
 import { generateApiDocumentation } from "@/ai/flows/api-documentation-generation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,10 +22,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useSearchParams } from 'next/navigation';
 
 
-// Form schema for the client-side form, including file handling
-const GenerateDocumentationClientFormSchema = GenerateApiDocumentationInputSchema.extend({
-  sourceCodeFiles: z.custom<FileList>().optional(), 
-}).omit({ sourceCodeSnippets: true }); 
+const GenerateDocumentationClientFormSchema = z.object({
+  description: z.string(), // Removed min length
+  partialSpec: z.string().optional(),
+  sourceCodeFiles: z.custom<FileList>().optional(),
+});
 
 type GenerateDocumentationClientFormValues = z.infer<typeof GenerateDocumentationClientFormSchema>;
 
@@ -70,7 +70,7 @@ For example:
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, form.setValue, toast]); // form.setValue and toast are stable
+  }, [searchParams, form.setValue, toast]); 
 
   const onSubmit = async (data: GenerateDocumentationClientFormValues) => {
     setIsLoading(true);
@@ -121,31 +121,31 @@ For example:
   };
 
   return (
-    <div className="container mx-auto space-y-8">
+    <div className="container mx-auto space-y-4 md:space-y-6"> {/* Reduced spacing */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Icons.FilePlus2 className="w-6 h-6 text-primary" /> AI-Powered API Documentation Generator
+          <CardTitle className="text-xl md:text-2xl flex items-center gap-2"> {/* Reduced size */}
+            <Icons.FilePlus2 className="w-5 h-5 md:w-6 md:h-6 text-primary" /> AI-Powered API Documentation Generator
           </CardTitle>
-          <CardDescription>
-            The AI uses your description, any partial OpenAPI spec you provide, and uploaded source code files to generate OpenAPI 3.0.x specifications.
-            It analyzes the text for API purpose, endpoints, methods, data structures, and infers relationships from code patterns.
-            If multiple distinct APIs are described or implied by the code, it will attempt to create separate specifications.
+          <CardDescription className="text-xs md:text-sm">
+             The AI uses your description, any partial OpenAPI spec, and uploaded source code files to generate OpenAPI 3.0.x specifications.
+             It analyzes text for API purpose, endpoints, methods, data structures, and infers relationships from code patterns.
+             If multiple distinct APIs are described or implied by the code, it will attempt to create separate specifications.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6"> {/* Reduced spacing */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>API Description(s)</FormLabel>
+                    <FormLabel className="text-xs md:text-sm">API Description(s)</FormLabel> {/* Reduced size */}
                     <FormControl>
                       <Textarea
-                        placeholder="Describe your API's purpose, main resources, common operations (e.g., CRUD for users), and any key data structures involved. If describing multiple APIs, try to clearly delineate them."
-                        className="min-h-[150px]"
+                        placeholder="Describe your API's purpose, resources, operations (e.g., CRUD for users), and key data structures. If describing multiple APIs, clearly delineate them."
+                        className="min-h-[120px] md:min-h-[150px] text-xs" /* Reduced height/text */
                         {...field}
                       />
                     </FormControl>
@@ -158,16 +158,16 @@ For example:
                 name="partialSpec"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Partial OpenAPI Specification (Optional)</FormLabel>
+                    <FormLabel className="text-xs md:text-sm">Partial OpenAPI Specification (Optional)</FormLabel> {/* Reduced size */}
                     <FormControl>
                       <Textarea
-                        placeholder="Paste any existing OpenAPI YAML or JSON content here. If describing multiple APIs, this might be for one of them."
-                        className="min-h-[100px] font-mono text-xs"
+                        placeholder="Paste existing OpenAPI YAML or JSON content here. For multiple APIs, this might be for one of them."
+                        className="min-h-[80px] md:min-h-[100px] font-mono text-xs" /* Reduced height/text */
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Provide a starting point if you have one.
+                    <FormDescription className="text-xs">
+                      Provide a starting point if available.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -178,7 +178,7 @@ For example:
                 name="sourceCodeFiles"
                 render={({ field: { onChange, onBlur, name, ref } }) => (
                   <FormItem>
-                    <FormLabel>Upload Source Code Files (Optional)</FormLabel>
+                    <FormLabel className="text-xs md:text-sm">Upload Source Code Files (Optional)</FormLabel> {/* Reduced size */}
                     <FormControl>
                       <Input
                         type="file"
@@ -188,11 +188,11 @@ For example:
                         onBlur={onBlur}
                         name={name}
                         ref={ref}
-                        className="pt-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        className="pt-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 text-xs" /* Reduced padding/text */
                       />
                     </FormControl>
-                    <FormDescription>
-                      Upload relevant source files (e.g., route definitions, controllers, data models). If files represent multiple APIs, the AI will attempt to create separate specs.
+                    <FormDescription className="text-xs">
+                      Upload relevant files (routes, controllers, models). If files represent multiple APIs, AI will try separate specs.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -200,9 +200,9 @@ For example:
               />
               <Button type="submit" disabled={isLoading} size="lg" className="w-full">
                 {isLoading ? (
-                  <Icons.Loader className="mr-2 h-5 w-5 animate-spin" />
+                  <Icons.Loader className="mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" />
                 ) : (
-                  <Icons.Zap className="mr-2 h-5 w-5" />
+                  <Icons.Zap className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                 )}
                 Generate API Specification(s)
               </Button>
@@ -212,46 +212,46 @@ For example:
       </Card>
 
       {isLoading && (
-        <Card className="mt-6 shadow-lg">
+        <Card className="mt-4 md:mt-6 shadow-lg"> {/* Reduced margin */}
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Icons.Loader className="w-5 h-5 animate-spin text-primary" /> Generating Specification(s)...
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2"> {/* Reduced size */}
+              <Icons.Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin text-primary" /> Generating Specification(s)...
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">The AI is working on generating the OpenAPI specification(s). This may take a few moments.</p>
-            <Progress value={isLoading ? undefined : 100} className="mt-4" />
+            <p className="text-xs md:text-sm text-muted-foreground">The AI is working. This may take a few moments.</p>
+            <Progress value={isLoading ? undefined : 100} className="mt-3 md:mt-4" /> {/* Reduced margin */}
           </CardContent>
         </Card>
       )}
 
       {error && (
-        <Alert variant="destructive" className="mt-6">
+        <Alert variant="destructive" className="mt-4 md:mt-6"> {/* Reduced margin */}
           <Icons.AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Generation Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle className="text-sm md:text-base">Generation Error</AlertTitle> {/* Reduced size */}
+          <AlertDescription className="text-xs md:text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
       {generationResult && !isLoading && !error && (
-        <Card className="mt-6 shadow-xl">
+        <Card className="mt-4 md:mt-6 shadow-xl"> {/* Reduced margin */}
           <CardHeader className="bg-primary/5">
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Icons.FileOutput className="w-7 h-7 text-primary" /> Generated OpenAPI Specification(s)
+            <CardTitle className="text-xl md:text-2xl flex items-center gap-2"> {/* Reduced size */}
+              <Icons.FileOutput className="w-6 h-6 md:w-7 md:h-7 text-primary" /> Generated OpenAPI Specification(s)
             </CardTitle>
-            <CardDescription>
-              AI Confidence Score (Overall): <Badge variant={generationResult.confidenceScore > 0.7 ? "default" : generationResult.confidenceScore > 0.4 ? "secondary" : "destructive"}>
+            <CardDescription className="text-xs md:text-sm">
+              AI Confidence Score (Overall): <Badge variant={generationResult.confidenceScore > 0.7 ? "default" : generationResult.confidenceScore > 0.4 ? "secondary" : "destructive"} className="text-xs">
                 {(generationResult.confidenceScore * 100).toFixed(0)}%
               </Badge>
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="pt-4 md:pt-6 space-y-3 md:space-y-4"> {/* Reduced padding/spacing */}
             {generationResult.suggestionsForImprovement && generationResult.suggestionsForImprovement.length > 0 && (
               <div>
-                <h3 className="text-md font-semibold mb-2 flex items-center gap-2">
-                  <Icons.Settings className="w-4 h-4 text-accent" /> Overall Suggestions for Improvement:
+                <h3 className="text-sm md:text-base font-semibold mb-1.5 flex items-center gap-2"> {/* Reduced size/margin */}
+                  <Icons.Settings className="w-3.5 h-3.5 md:w-4 md:h-4 text-accent" /> Overall Suggestions for Improvement:
                 </h3>
-                <ul className="list-disc list-inside pl-4 space-y-1 text-sm text-muted-foreground">
+                <ul className="list-disc list-inside pl-3 md:pl-4 space-y-1 text-xs md:text-sm text-muted-foreground"> {/* Reduced padding */}
                   {generationResult.suggestionsForImprovement.map((suggestion, index) => (
                     <li key={`suggestion-${index}`}>{suggestion}</li>
                   ))}
@@ -260,29 +260,29 @@ For example:
             )}
             
             {generationResult.generatedSpecs && generationResult.generatedSpecs.length > 0 ? (
-              <Accordion type="multiple" defaultValue={generationResult.generatedSpecs.length === 1 ? [generationResult.generatedSpecs[0].apiName] : []} className="w-full space-y-2">
+              <Accordion type="multiple" defaultValue={generationResult.generatedSpecs.length === 1 ? [generationResult.generatedSpecs[0].apiName] : []} className="w-full space-y-1.5 md:space-y-2"> {/* Reduced spacing */}
                 {generationResult.generatedSpecs.map((specItem, index) => (
                   <AccordionItem value={specItem.apiName || `spec-${index}`} key={specItem.apiName || `spec-${index}`} className="border rounded-md shadow-sm">
-                     <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 rounded-t-md">
-                        <div className="flex items-center gap-2">
-                           <Icons.FileJson className="w-5 h-5 text-accent" />
-                           <span className="font-semibold">{specItem.apiName || `Generated API ${index + 1}`}</span>
+                     <AccordionTrigger className="px-3 py-2.5 md:px-4 md:py-3 hover:bg-muted/50 rounded-t-md"> {/* Reduced padding */}
+                        <div className="flex items-center gap-1.5 md:gap-2"> {/* Reduced gap */}
+                           <Icons.FileJson className="w-4 h-4 md:w-5 md:w-5 text-accent" />
+                           <span className="font-semibold text-xs md:text-sm">{specItem.apiName || `Generated API ${index + 1}`}</span> {/* Reduced size */}
                         </div>
                      </AccordionTrigger>
-                     <AccordionContent className="p-4 bg-background rounded-b-md">
-                        <ScrollArea className="h-[400px] rounded-md border p-3 bg-muted/30">
+                     <AccordionContent className="p-3 md:p-4 bg-background rounded-b-md"> {/* Reduced padding */}
+                        <ScrollArea className="h-[300px] md:h-[400px] rounded-md border p-2.5 md:p-3 bg-muted/30"> {/* Reduced padding */}
                           <pre className="text-xs font-mono">{specItem.openApiSpecYaml}</pre>
                         </ScrollArea>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="mt-2"
+                          className="mt-2 text-xs" /* Reduced margin/text */
                           onClick={() => {
                             navigator.clipboard.writeText(specItem.openApiSpecYaml);
                             toast({ title: "Copied to clipboard!", description: `${specItem.apiName || 'Generated API'} YAML copied.` });
                           }}
                         >
-                          <Icons.Copy className="mr-2 h-4 w-4" /> Copy YAML for {specItem.apiName || `API ${index + 1}`}
+                          <Icons.Copy className="mr-1.5 h-3.5 w-3.5" /> Copy YAML
                         </Button>
                      </AccordionContent>
                   </AccordionItem>
@@ -291,8 +291,8 @@ For example:
             ) : (
                <Alert>
                   <Icons.Info className="h-4 w-4" />
-                  <AlertTitle>No Specifications Generated</AlertTitle>
-                  <AlertDescription>The AI did not produce any API specifications based on the input. Please try refining your description or providing more relevant code files.</AlertDescription>
+                  <AlertTitle className="text-sm md:text-base">No Specifications Generated</AlertTitle> {/* Reduced size */}
+                  <AlertDescription className="text-xs md:text-sm">The AI did not produce any API specifications based on the input.</AlertDescription>
                 </Alert>
             )}
           </CardContent>

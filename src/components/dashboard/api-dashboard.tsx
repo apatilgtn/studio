@@ -15,8 +15,9 @@ import type { ChartConfig } from "@/components/ui/chart";
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { OpenAPIV3, OpenAPIV2 } from 'openapi-types';
+import Image from 'next/image';
 
-// Helper to generate somewhat realistic time-series data
+
 const generateLineChartData = (points = 7, minVal = 20, maxVal = 80, trend: 'up' | 'down' | 'stable' = 'stable', noise = 5) => {
   let currentValue = (minVal + maxVal) / 2;
   return Array.from({ length: points }, (_, i) => {
@@ -27,7 +28,7 @@ const generateLineChartData = (points = 7, minVal = 20, maxVal = 80, trend: 'up'
       name: `T-${points - 1 - i}`, 
       value: parseFloat(currentValue.toFixed(1)), 
     };
-  }).reverse(); // Ensure T-0 is the latest
+  }).reverse(); 
 };
 
 
@@ -68,21 +69,20 @@ export function ApiDashboard() {
     try {
       Object.keys(spec.paths).forEach(path => {
         const pathItem = spec.paths![path];
-        if (!pathItem) return; // Skip if pathItem is undefined
+        if (!pathItem) return; 
         
-        // Type guard for path methods
         const validMethods = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'trace'] as const;
         type HttpMethod = typeof validMethods[number];
 
         for (const method in pathItem) {
           if (validMethods.includes(method as HttpMethod)) {
             const operation = pathItem[method as HttpMethod] as (OpenAPIV3.OperationObject | OpenAPIV2.OperationObject);
-            if (operation && typeof operation === 'object') { // Ensure operation is an object
+            if (operation && typeof operation === 'object') { 
               endpoints.push({
                 name: `${method.toUpperCase()} ${path}`,
-                status: "Healthy", // Default status
-                details: (operation as any).summary || "Nominal operation", // Use summary if available
-                Icon: Icons.Network, // Default icon
+                status: "Healthy", 
+                details: (operation as any).summary || "Nominal operation", 
+                Icon: Icons.Network, 
               });
             }
           }
@@ -90,23 +90,22 @@ export function ApiDashboard() {
       });
     } catch (e) {
       console.error("Error extracting endpoints from spec:", e);
-      return []; // Return empty if an error occurs during extraction
+      return []; 
     }
-    return endpoints.slice(0, 5); // Limit for display
+    return endpoints.slice(0, 5); 
   }, [spec]);
 
   useEffect(() => {
     setSystemHealthData(extractEndpoints());
-    // Reset metrics when spec (or its ID, indicating a new spec from DB) changes
     setMemoryUsageData(generateLineChartData(7, 30, 70, 'stable', 10));
     setCpuUsageData(generateLineChartData(7, 20, 60, 'stable', 8));
     setResponseTimeData(generateLineChartData(7, 50, 300, 'stable', 50));
     setErrorRateData(generateLineChartData(7, 0, 5, 'stable', 1));
-    setAnomalyData([]); // Clear anomalies
-    stopSimulation(); // Stop any ongoing simulation
+    setAnomalyData([]); 
+    stopSimulation(); 
     setSimulationTimeElapsed(0);
     setCurrentScenario("Normal Operation");
-  }, [spec, activeSpecId, extractEndpoints]); // Added activeSpecId and extractEndpoints
+  }, [spec, activeSpecId, extractEndpoints]);
 
 
   const stopSimulation = useCallback(() => {
@@ -117,33 +116,37 @@ export function ApiDashboard() {
     setIsSimulating(false);
   }, [simulationIntervalId]);
 
-  // Effect for toast notifications related to simulation state changes
+  const simulationToastRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (isSimulating && simulationTimeElapsed === 0) {
-      toast({ title: "Simulation Started", description: `Running ${currentScenario}.` });
+      const {id} = toast({ title: "Simulation Started", description: `Running ${currentScenario}.` });
+      simulationToastRef.current = id;
     } else if (!isSimulating && simulationIntervalId === null && simulationTimeElapsed > 0 && simulationTimeElapsed < MAX_SIMULATION_SECONDS) {
-      // Paused
-      toast({ title: "Simulation Paused" });
+      if(simulationToastRef.current) useToast.getState().dismiss(simulationToastRef.current);
+      const {id} = toast({ title: "Simulation Paused" });
+      simulationToastRef.current = id;
     } else if (!isSimulating && simulationTimeElapsed >= MAX_SIMULATION_SECONDS) {
-      // Completed
-       toast({ title: "Simulation Ended", description: `${currentScenario} completed.` });
+      if(simulationToastRef.current) useToast.getState().dismiss(simulationToastRef.current);
+       const {id} = toast({ title: "Simulation Ended", description: `${currentScenario} completed.` });
+       simulationToastRef.current = id;
     }
-  }, [isSimulating, simulationTimeElapsed, currentScenario, toast, simulationIntervalId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSimulating, simulationTimeElapsed, currentScenario, simulationIntervalId]);
 
 
   const startSimulation = (scenario: string = "Memory Leak Simulation") => {
     stopSimulation(); 
     setCurrentScenario(scenario);
-    setSimulationTimeElapsed(0); // Reset time for new simulation
+    setSimulationTimeElapsed(0); 
     setAnomalyData([]); 
     
-    // Initial kick for data
     setMemoryUsageData(generateLineChartData(7, 30, (scenario.includes("Memory Leak") ? 50: 70) ));
     setCpuUsageData(generateLineChartData(7, 20, (scenario.includes("CPU Spike") ? 70: 60)));
     setResponseTimeData(generateLineChartData(7, 50, (scenario.includes("Latency Increase") ? 400: 300)));
     setErrorRateData(generateLineChartData(7, 0, (scenario.includes("Error Spike") ? 15: 5)));
     
-    setIsSimulating(true); // Set simulating state after resetting time and before interval starts
+    setIsSimulating(true);
 
     const intervalId = setInterval(() => {
       setSimulationTimeElapsed(prev => {
@@ -216,7 +219,9 @@ export function ApiDashboard() {
       stopSimulation();
     } else {
       if (!spec || !rawSpec) {
-        toast({ title: "No Spec Loaded", description: "Please load an API specification to start simulation.", variant: "destructive"});
+        if(simulationToastRef.current) useToast.getState().dismiss(simulationToastRef.current);
+        const {id} = toast({ title: "No Spec Loaded", description: "Please load an API specification to start simulation.", variant: "destructive"});
+        simulationToastRef.current = id;
         return;
       }
       startSimulation(scenario || currentScenario);
@@ -233,7 +238,9 @@ export function ApiDashboard() {
     setErrorRateData(generateLineChartData(7, 0, 5));
     setSystemHealthData(extractEndpoints());
     setAnomalyData([]);
-    toast({ title: "Simulation Reset" });
+    if(simulationToastRef.current) useToast.getState().dismiss(simulationToastRef.current);
+    const {id} = toast({ title: "Simulation Reset" });
+    simulationToastRef.current = id;
   };
 
   useEffect(() => {
@@ -247,7 +254,7 @@ export function ApiDashboard() {
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-destructive flex items-center gap-2">
+          <CardTitle className="text-destructive flex items-center gap-2 text-xl">
             <Icons.AlertTriangle /> Error Loading Specification
           </CardTitle>
         </CardHeader>
@@ -266,21 +273,32 @@ export function ApiDashboard() {
   }
 
   if (!spec || !rawSpec) {
-    return (
-      <Card className="w-full shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Icons.LayoutDashboard />API Harmony Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
+     return (
+      <div className="p-6 md:p-8 space-y-6">
+        <section className="bg-card shadow-xl rounded-xl p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="md:w-2/3">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Welcome to API Harmony</h1>
+            <p className="text-md md:text-lg text-muted-foreground mb-6">
+              Your intelligent API orchestration engine. Import an OpenAPI spec to unlock powerful insights and management tools.
+            </p>
+            <Link href="/" passHref>
+                <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md">
+                  <Icons.UploadCloud className="mr-2 h-5 w-5" /> Import Your First API
+                </Button>
+            </Link>
+          </div>
+          <div className="md:w-1/3 flex justify-center items-center">
+            <Icons.Zap className="w-32 h-32 text-primary opacity-20" /> 
+          </div>
+        </section>
+        <Alert>
             <Icons.Info className="h-4 w-4" />
             <AlertTitle>No API Specification Loaded</AlertTitle>
             <AlertDescription>
               Please import an OpenAPI specification using the <Link href="/" className="underline text-primary hover:text-primary/80">Import page</Link> to view the dashboard.
             </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+        </Alert>
+      </div>
     );
   }
 
@@ -288,7 +306,7 @@ export function ApiDashboard() {
     return (
       <Card className="w-full shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className="flex items-center gap-2 text-destructive text-xl">
             <Icons.AlertTriangle /> Malformed API Specification
           </CardTitle>
         </CardHeader>
@@ -314,38 +332,47 @@ export function ApiDashboard() {
 
   const simulationScenarios = [
     "Normal Operation",
-    "Memory Leak Simulation",
-    "CPU Spike Simulation",
-    "Latency Increase Simulation",
-    "Error Spike Simulation",
+    "Memory Leak", 
+    "CPU Spike",
+    "Latency Increase",
+    "Error Spike",
   ];
 
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <Card className="shadow-lg overflow-hidden">
-        <CardHeader className="bg-card">
-          <CardTitle className="text-2xl font-semibold text-primary flex items-center gap-3">
-            <Icons.LayoutDashboard className="w-7 h-7" /> Dashboard: {info.title}
-          </CardTitle>
-          <CardDescription className="text-sm pt-1">
-            {fileName ? `File: ${fileName} | ` : ''} Version: {info.version}
-            {activeSpecId && <span className="text-xs text-muted-foreground"> (ID: {activeSpecId.substring(0,8)}...)</span>}
-          </CardDescription>
+        <CardHeader className="bg-card border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-xl md:text-2xl font-semibold text-primary flex items-center gap-3">
+                <Icons.LayoutDashboard className="w-6 h-6 md:w-7 md:h-7" /> {info.title}
+              </CardTitle>
+              <CardDescription className="text-xs md:text-sm pt-1 text-muted-foreground">
+                {fileName ? `File: ${fileName} | ` : ''} Version: {info.version}
+                {activeSpecId && <span className="text-xs"> (ID: {activeSpecId.substring(0,8)}...)</span>}
+              </CardDescription>
+            </div>
+             <div className="mt-3 sm:mt-0 text-xs text-muted-foreground">
+                {spec.servers && spec.servers.length > 0 && (
+                    <p>Base URL: <span className="font-medium text-foreground">{spec.servers[0].url}</span></p>
+                )}
+                <p>Paths: <span className="font-medium text-foreground">{Object.keys(spec.paths || {}).length}</span></p>
+             </div>
+          </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <Card className="lg:col-span-1 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="text-lg font-medium flex items-center">
-              <Icons.SlidersHorizontal className="w-5 h-5 mr-2 text-primary" /> Simulation Controls
+            <CardTitle className="text-base md:text-lg font-medium flex items-center">
+              <Icons.SlidersHorizontal className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary" /> Simulation Controls
             </CardTitle>
             <CardDescription className="text-xs">Simulate API degradation scenarios.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 md:space-y-4">
              <div className="space-y-2">
-                <p className="text-sm font-medium">Select Scenario:</p>
+                <p className="text-xs md:text-sm font-medium">Select Scenario:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {simulationScenarios.map(scenario => (
                     <Button 
@@ -353,34 +380,34 @@ export function ApiDashboard() {
                         onClick={() => handleToggleSimulation(scenario)} 
                         variant={currentScenario === scenario && isSimulating ? "default" : "outline"}
                         size="sm"
-                        className="text-xs"
+                        className="text-xs h-8"
                         disabled={isSimulating && currentScenario !== scenario}
                     >
-                        {isSimulating && currentScenario === scenario ? <Icons.PauseCircle className="mr-2 h-4 w-4" /> : <Icons.PlayCircle className="mr-2 h-4 w-4" />}
-                        {scenario.replace(" Simulation", "")}
+                        {isSimulating && currentScenario === scenario ? <Icons.PauseCircle className="mr-1.5 h-3.5 w-3.5" /> : <Icons.PlayCircle className="mr-1.5 h-3.5 w-3.5" />}
+                        {scenario}
                     </Button>
                 ))}
                 </div>
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex justify-between items-center text-xs md:text-sm">
                 <span>Simulation Time</span>
-                <span className="font-semibold">{simulationTimeElapsed} / {MAX_SIMULATION_SECONDS} seconds</span>
+                <span className="font-semibold">{simulationTimeElapsed} / {MAX_SIMULATION_SECONDS}s</span>
               </div>
-              <Progress value={simulationProgressPercent} className="h-2" />
+              <Progress value={simulationProgressPercent} className="h-1.5 md:h-2" />
             </div>
-             <p className="text-sm">Current: <span className="font-semibold">{currentScenario}</span> {isSimulating ? "(Running)" : "(Paused/Stopped)"}</p>
+             <p className="text-xs md:text-sm">Current: <span className="font-semibold">{currentScenario}</span> {isSimulating ? "(Running)" : "(Paused/Stopped)"}</p>
             
             <div className="flex gap-2">
                <Button onClick={() => handleToggleSimulation()} variant={isSimulating ? "destructive" : "default"} className="w-full" size="sm" disabled={!spec || !rawSpec}>
                 {isSimulating ? (
-                  <><Icons.PauseCircle className="mr-2 h-4 w-4" /> Pause Current</>
+                  <><Icons.PauseCircle className="mr-1.5 h-3.5 w-3.5" /> Pause</>
                 ) : (
-                  <><Icons.PlayCircle className="mr-2 h-4 w-4" /> Resume/Start</>
+                  <><Icons.PlayCircle className="mr-1.5 h-3.5 w-3.5" /> Resume</>
                 )}
               </Button>
               <Button onClick={handleResetSimulation} variant="outline" className="w-full" size="sm" disabled={simulationTimeElapsed === 0 && !isSimulating}>
-                <Icons.RefreshCw className="mr-2 h-4 w-4" /> Reset All
+                <Icons.RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reset
               </Button>
             </div>
           </CardContent>
@@ -388,16 +415,16 @@ export function ApiDashboard() {
 
         <Card className="lg:col-span-2 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="text-lg font-medium flex items-center">
-              <Icons.ClipboardList className="w-5 h-5 mr-2 text-primary" /> System Health (Endpoints from Spec)
+            <CardTitle className="text-base md:text-lg font-medium flex items-center">
+              <Icons.ClipboardList className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary" /> System Health
             </CardTitle>
-            <CardDescription className="text-xs">Status of monitored API endpoints. Limited to first 5 for display.</CardDescription>
+            <CardDescription className="text-xs">Status of monitored API endpoints (first 5 from spec).</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 max-h-72 overflow-y-auto">
+          <CardContent className="space-y-1.5 md:space-y-2 max-h-60 md:max-h-72 overflow-y-auto pr-1">
             {systemHealthData.length > 0 ? systemHealthData.map((item) => (
               <SystemHealthItem key={item.name} {...item} />
             )) : (
-                <p className="text-sm text-muted-foreground p-4 text-center">No endpoints found or loaded from specification.</p>
+                <p className="text-xs md:text-sm text-muted-foreground p-4 text-center">No endpoints found or loaded.</p>
             )}
           </CardContent>
         </Card>
@@ -405,12 +432,12 @@ export function ApiDashboard() {
 
       <Card className="shadow-md hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold flex items-center">
-            <Icons.Activity className="w-6 h-6 mr-2 text-primary" /> Real-time Metrics (Simulated)
+          <CardTitle className="text-lg md:text-xl font-semibold flex items-center">
+            <Icons.Activity className="w-5 h-5 md:w-6 md:h-6 mr-2 text-primary" /> Real-time Metrics (Simulated)
           </CardTitle>
-          <CardDescription>Simulated performance metrics for {info.title}. These metrics are randomly generated or adjusted during simulation.</CardDescription>
+          <CardDescription className="text-xs md:text-sm">Simulated performance metrics for {info.title}. These metrics are randomly generated or adjusted during simulation.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           <MetricCard 
             title="Memory Usage" 
             value={memoryUsageData.length > 0 ? memoryUsageData[memoryUsageData.length - 1].value : 0} 
@@ -456,12 +483,12 @@ export function ApiDashboard() {
 
       <Card className="shadow-md hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold flex items-center">
-            <Icons.Zap className="w-6 h-6 mr-2 text-primary" /> Anomaly Detection (Simulated)
+          <CardTitle className="text-lg md:text-xl font-semibold flex items-center">
+            <Icons.Zap className="w-5 h-5 md:w-6 md:h-6 mr-2 text-primary" /> Anomaly Detection (Simulated)
           </CardTitle>
-          <CardDescription>Detected anomalies based on simulated metric thresholds.</CardDescription>
+          <CardDescription className="text-xs md:text-sm">Detected anomalies based on simulated metric thresholds.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 md:space-y-4">
           {anomalyData.length > 0 ? (
             anomalyData.map((anomaly, index) => (
               <AnomalyItem key={index} {...anomaly} />
@@ -469,8 +496,8 @@ export function ApiDashboard() {
           ) : (
             <Alert>
               <Icons.CheckCircle2 className="h-4 w-4" />
-              <AlertTitle>No Anomalies Detected (Simulated)</AlertTitle>
-              <AlertDescription>All simulated systems are operating within normal parameters based on current thresholds.</AlertDescription>
+              <AlertTitle className="text-sm md:text-base">No Anomalies Detected</AlertTitle>
+              <AlertDescription className="text-xs md:text-sm">All simulated systems are operating within normal parameters.</AlertDescription>
             </Alert>
           )}
         </CardContent>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -30,7 +31,7 @@ export function ApiComplianceCheckView() {
   const form = useForm<CheckApiComplianceInput>({
     resolver: zodResolver(CheckApiComplianceInputSchema),
     defaultValues: {
-      openApiSpec: "", // Will be populated from store
+      openApiSpec: "", 
       complianceProfile: "GENERAL",
     },
   });
@@ -70,7 +71,7 @@ export function ApiComplianceCheckView() {
     }
   };
 
-  const getStatusColor = (status: "PASS" | "FAIL" | "WARN" | "NOT_APPLICABLE") => {
+  const getStatusColorClass = (status: "PASS" | "FAIL" | "WARN" | "NOT_APPLICABLE") => {
     switch (status) {
       case "PASS": return "text-green-600";
       case "FAIL": return "text-red-600";
@@ -81,32 +82,32 @@ export function ApiComplianceCheckView() {
   
   const getStatusIcon = (status: "PASS" | "FAIL" | "WARN" | "NOT_APPLICABLE") => {
     switch (status) {
-      case "PASS": return <Icons.CheckCircle2 className="w-4 h-4 text-green-600" />;
-      case "FAIL": return <Icons.XCircle className="w-4 h-4 text-red-600" />;
-      case "WARN": return <Icons.AlertTriangle className="w-4 h-4 text-orange-500" />;
-      default: return <Icons.Info className="w-4 h-4 text-muted-foreground" />;
+      case "PASS": return <Icons.CheckCircle2 className="w-3.5 h-3.5 text-green-600" />;
+      case "FAIL": return <Icons.XCircle className="w-3.5 h-3.5 text-red-600" />;
+      case "WARN": return <Icons.AlertTriangle className="w-3.5 h-3.5 text-orange-500" />;
+      default: return <Icons.Info className="w-3.5 h-3.5 text-muted-foreground" />;
     }
   };
 
 
   return (
-    <div className="container mx-auto space-y-8">
+    <div className="container mx-auto space-y-4 md:space-y-6"> {/* Reduced spacing */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Icons.ShieldCheck className="w-6 h-6 text-primary" /> API Compliance Check
+          <CardTitle className="text-xl md:text-2xl flex items-center gap-2"> {/* Reduced size */}
+            <Icons.ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-primary" /> API Compliance Check
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs md:text-sm">
             Analyze your OpenAPI specification against predefined compliance profiles using AI.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!spec && !specError && (
             <>
-              <Alert className="mb-6">
+              <Alert className="mb-4 md:mb-6"> {/* Reduced margin */}
                 <Icons.Info className="h-4 w-4" />
-                <AlertTitle>Load Specification to Start</AlertTitle>
-                <AlertDescription>
+                <AlertTitle className="text-sm md:text-base">Load Specification to Start</AlertTitle> {/* Reduced size */}
+                <AlertDescription className="text-xs md:text-sm">
                   You need to import an OpenAPI specification before running a compliance check.
                   Use the form below or the <a href="/" className="underline text-primary">Import page</a>.
                 </AlertDescription>
@@ -115,19 +116,19 @@ export function ApiComplianceCheckView() {
             </>
           )}
           {specError && (
-             <Alert variant="destructive" className="mb-6">
+             <Alert variant="destructive" className="mb-4 md:mb-6"> {/* Reduced margin */}
                 <Icons.AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Error with Specification</AlertTitle>
-                <AlertDescription>
+                <AlertTitle className="text-sm md:text-base">Error with Specification</AlertTitle> {/* Reduced size */}
+                <AlertDescription className="text-xs md:text-sm">
                   There was an error loading the specification: {specError}. Please try importing again.
-                  <div className="mt-4"><OpenApiUploadForm/></div>
+                  <div className="mt-3 md:mt-4"><OpenApiUploadForm/></div> {/* Reduced margin */}
                 </AlertDescription>
             </Alert>
           )}
           {spec && !specError && (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
-                <p className="text-sm text-muted-foreground">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6 mt-3 md:mt-4"> {/* Reduced spacing/margin */}
+                <p className="text-xs text-muted-foreground">
                   Loaded specification: <strong className="text-foreground">{fileName}</strong>
                 </p>
                 <FormField
@@ -135,7 +136,7 @@ export function ApiComplianceCheckView() {
                   name="complianceProfile"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Compliance Profile</FormLabel>
+                      <FormLabel className="text-xs md:text-sm">Compliance Profile</FormLabel> {/* Reduced size */}
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -148,16 +149,16 @@ export function ApiComplianceCheckView() {
                           <SelectItem value="FINANCIAL_BASIC">Financial Basic Security</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Choose the set of rules to check against.</FormDescription>
+                      <FormDescription className="text-xs">Choose the set of rules to check against.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <Button type="submit" disabled={isLoading || !rawSpec} size="lg" className="w-full">
                   {isLoading ? (
-                    <Icons.Loader className="mr-2 h-5 w-5 animate-spin" />
+                    <Icons.Loader className="mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" />
                   ) : (
-                    <Icons.Zap className="mr-2 h-5 w-5" />
+                    <Icons.Zap className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                   )}
                   Start Compliance Check
                 </Button>
@@ -168,67 +169,67 @@ export function ApiComplianceCheckView() {
       </Card>
 
       {isLoading && (
-        <Card className="mt-6 shadow-lg">
+        <Card className="mt-4 md:mt-6 shadow-lg"> {/* Reduced margin */}
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Icons.Loader className="w-5 h-5 animate-spin text-primary" /> Checking Compliance...
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2"> {/* Reduced size */}
+              <Icons.Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin text-primary" /> Checking Compliance...
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">The AI is analyzing the specification against the selected profile. This may take a moment.</p>
-            <Progress value={undefined} className="mt-4" />
+            <p className="text-xs md:text-sm text-muted-foreground">The AI is analyzing the specification. This may take a moment.</p>
+            <Progress value={undefined} className="mt-3 md:mt-4" /> {/* Reduced margin */}
           </CardContent>
         </Card>
       )}
 
       {analysisError && (
-        <Alert variant="destructive" className="mt-6">
+        <Alert variant="destructive" className="mt-4 md:mt-6"> {/* Reduced margin */}
           <Icons.AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Compliance Check Error</AlertTitle>
-          <AlertDescription>{analysisError}</AlertDescription>
+          <AlertTitle className="text-sm md:text-base">Compliance Check Error</AlertTitle> {/* Reduced size */}
+          <AlertDescription className="text-xs md:text-sm">{analysisError}</AlertDescription>
         </Alert>
       )}
 
       {complianceResult && !isLoading && !analysisError && (
-        <Card className="mt-6 shadow-xl">
+        <Card className="mt-4 md:mt-6 shadow-xl"> {/* Reduced margin */}
           <CardHeader className="bg-primary/5">
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Icons.Gavel className="w-7 h-7 text-primary" /> Compliance Report for {form.getValues("complianceProfile")} Profile
+            <CardTitle className="text-xl md:text-2xl flex items-center gap-2"> {/* Reduced size */}
+              <Icons.Gavel className="w-6 h-6 md:w-7 md:h-7 text-primary" /> Compliance Report: {form.getValues("complianceProfile")}
             </CardTitle>
-             <div className="flex justify-between items-center pt-2">
-                <CardDescription className="text-sm flex-1">
+             <div className="flex justify-between items-center pt-1 md:pt-2"> {/* Reduced padding */}
+                <CardDescription className="text-xs md:text-sm flex-1">
                     {complianceResult.summary || "Detailed compliance analysis results."}
                 </CardDescription>
-                <div className="text-right ml-4">
+                <div className="text-right ml-3 md:ml-4"> {/* Reduced margin */}
                     <p className="text-xs text-muted-foreground">Overall Score</p>
-                    <p className={`text-2xl font-bold ${complianceResult.overallComplianceScore >= 80 ? 'text-green-600' : complianceResult.overallComplianceScore >= 50 ? 'text-orange-500' : 'text-red-600'}`}>
+                    <p className={`text-xl md:text-2xl font-bold ${complianceResult.overallComplianceScore >= 80 ? 'text-green-600' : complianceResult.overallComplianceScore >= 50 ? 'text-orange-500' : 'text-red-600'}`}>
                         {complianceResult.overallComplianceScore.toFixed(0)}/100
                     </p>
                 </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
+          <CardContent className="pt-4 md:pt-6 space-y-4 md:space-y-6"> {/* Reduced padding/spacing */}
             <div>
-              <h3 className="text-lg font-semibold mb-3">Detailed Checks</h3>
-              <ScrollArea className="h-[400px] border rounded-md">
+              <h3 className="text-base md:text-lg font-semibold mb-2">Detailed Checks</h3> {/* Reduced size/margin */}
+              <ScrollArea className="h-[300px] md:h-[400px] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[80px]">Status</TableHead>
-                      <TableHead className="w-[120px]">Rule ID</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Findings</TableHead>
+                      <TableHead className="w-[80px] text-xs">Status</TableHead> {/* Smaller text */}
+                      <TableHead className="w-[120px] text-xs">Rule ID</TableHead>
+                      <TableHead className="text-xs">Description</TableHead>
+                      <TableHead className="text-xs">Findings</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {complianceResult.checksPerformed.map((check, index) => (
                       <TableRow key={index} className={check.status === "FAIL" ? "bg-destructive/10" : check.status === "WARN" ? "bg-orange-500/10" : ""}>
-                        <TableCell className="font-medium">
-                           <div className="flex items-center gap-2"> {getStatusIcon(check.status)} <span className={getStatusColor(check.status)}>{check.status}</span></div>
+                        <TableCell className="font-medium text-xs py-1.5"> {/* Smaller padding/text */}
+                           <div className="flex items-center gap-1.5"> {getStatusIcon(check.status)} <span className={getStatusColorClass(check.status)}>{check.status}</span></div>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{check.ruleId}</TableCell>
-                        <TableCell className="text-xs">{check.description}</TableCell>
-                        <TableCell className="text-xs">{check.findings || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs py-1.5">{check.ruleId}</TableCell>
+                        <TableCell className="text-xs py-1.5">{check.description}</TableCell>
+                        <TableCell className="text-xs py-1.5">{check.findings || "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -238,7 +239,7 @@ export function ApiComplianceCheckView() {
             
             {complianceResult.dataFlowInsights && complianceResult.dataFlowInsights.length > 0 && (
                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Data Flow Insights</h3>
+                    <h3 className="text-base md:text-lg font-semibold mb-1.5">Data Flow Insights</h3> {/* Reduced size/margin */}
                     <Alert>
                         <Icons.Info className="h-4 w-4" />
                         <AlertDescription>
@@ -252,16 +253,14 @@ export function ApiComplianceCheckView() {
 
             {complianceResult.recommendations && complianceResult.recommendations.length > 0 && (
                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Recommendations</h3>
-                     <ScrollArea className="h-40 rounded-md border p-4 bg-muted/30">
-                        <ul className="list-disc list-inside space-y-2 text-sm">
+                    <h3 className="text-base md:text-lg font-semibold mb-1.5">Recommendations</h3> {/* Reduced size/margin */}
+                     <ScrollArea className="h-32 md:h-40 rounded-md border p-3 bg-muted/30"> {/* Reduced padding */}
+                        <ul className="list-disc list-inside space-y-1.5 text-xs md:text-sm"> {/* Reduced spacing/text */}
                             {complianceResult.recommendations.map((rec, index) => <li key={`rec-${index}`}>{rec}</li>)}
                         </ul>
                     </ScrollArea>
                  </div>
             )}
-
-
           </CardContent>
         </Card>
       )}
