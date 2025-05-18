@@ -78,6 +78,7 @@ import {
   Landmark,
   ServerCrash,
   Copy,
+  Save, // Added Save icon
 } from 'lucide-react';
 
 export const Icons = {
@@ -159,6 +160,7 @@ export const Icons = {
   Landmark,
   ServerCrash,
   Copy, 
+  Save, // Added Save icon to export
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
