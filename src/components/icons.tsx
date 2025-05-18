@@ -23,7 +23,7 @@ import {
   Server,
   Replace,
   PlusCircle,
-  Trash2, // It is imported
+  Trash2,
   Network,
   ArrowRightCircle,
   Edit3,
@@ -79,6 +79,9 @@ import {
   ServerCrash,
   Copy,
   Save,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
 
 export const Icons = {
@@ -140,6 +143,7 @@ export const Icons = {
   TrendingUp, 
   Webhook, 
   LocateFixed, 
+  // ServerSearch, // This icon does not exist in lucide-react
   BrainCircuit, 
   Gauge, 
   User,
@@ -161,7 +165,10 @@ export const Icons = {
   ServerCrash,
   Copy,
   Save,
-  Trash2, // Added Trash2 here
+  Trash2,
+  Sun,
+  Moon,
+  Laptop,
 };
 
 export const ApiMethodIcons: Record<string, React.ElementType> = {
