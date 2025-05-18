@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation"; 
 
 interface DiscoveredApi {
   id: string;
@@ -30,7 +30,7 @@ interface DiscoveredApi {
   endpoint: string;
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS";
   status: "healthy" | "warning" | "critical" | "unknown";
-  responseTime: number; // in ms
+  responseTime: number; 
   security: "high" | "medium" | "low";
   isUndocumented: boolean;
   lastScanned: string;
@@ -84,7 +84,7 @@ const generateMockApis = (count = 100): DiscoveredApi[] => {
     const method = methods[i % methods.length];
     const status = statuses[i % statuses.length];
     const security = securities[i % securities.length];
-    const isUndocumented = Math.random() < 0.3; // Increased chance for demo
+    const isUndocumented = Math.random() < 0.3; 
     let issues = 0;
     if (status === "critical") issues += Math.floor(Math.random() * 2) + 1;
     if (status === "warning") issues += 1;
@@ -191,13 +191,15 @@ export function APIDiscoveryScannerView() {
     setDiscoveredApis(mockData);
 
     const detectedIssues = mockData.reduce((acc, api) => acc + api.issuesFound, 0);
-    setIssuesDetected(detectedIssues);
-    setRecommendationsCount(Math.floor(detectedIssues * 1.2) + mockData.length); // Each API gets at least one rec
+    const undocumentedCount = mockData.filter(api => api.isUndocumented).length;
+    setIssuesDetected(detectedIssues + undocumentedCount); // Simplified issue count
+
+    setRecommendationsCount(Math.floor((detectedIssues + undocumentedCount) * 1.2) + mockData.length); 
     
     setIsLoading(false);
     toast({
       title: "API Scan Complete",
-      description: `${mockData.length} APIs discovered. ${detectedIssues} potential issues found.`,
+      description: `${mockData.length} APIs discovered. ${detectedIssues + undocumentedCount} potential issues found.`,
     });
   };
   
@@ -211,16 +213,18 @@ export function APIDiscoveryScannerView() {
     if (apiToDoc) {
       const redirectUrl = `/generate-documentation?apiName=${encodeURIComponent(apiToDoc.name)}&endpoint=${encodeURIComponent(apiToDoc.endpoint)}&method=${encodeURIComponent(apiToDoc.method)}`;
       
-      // Client-side update for immediate visual feedback
       setDiscoveredApis(prevApis => 
         prevApis.map(api => 
           api.id === apiId 
-            ? { ...api, isUndocumented: false, issuesFound: Math.max(0, api.issuesFound -1) } // Decrement issues if undocumented was one
+            ? { ...api, isUndocumented: false, issuesFound: Math.max(0, api.issuesFound -1) } 
             : api
         )
       );
-      // Update overall issues count based on the change
-      setIssuesDetected(prevCount => Math.max(0, prevCount -1));
+      
+      const currentIssues = discoveredApis.find(api => api.id === apiId)?.issuesFound || 0;
+      if (apiToDoc.isUndocumented) { // Only decrement if it was actually undocumented
+         setIssuesDetected(prevCount => Math.max(0, prevCount -1));
+      }
 
 
       toast({
@@ -238,7 +242,7 @@ export function APIDiscoveryScannerView() {
     return "bg-gray-400 hover:bg-gray-500";
   };
   
-  const getSecurityBadgeVariant = (security: DiscoveredApi["security"]): "default" | "secondary" | "destructive" => {
+  const getSecurityBadgeVariant = (security: DiscoveredApi["security"]): "default" | "secondary" | "destructive" | "outline" => {
     if (security === "high") return "default"; 
     if (security === "medium") return "secondary"; 
     return "destructive"; 
@@ -258,139 +262,125 @@ export function APIDiscoveryScannerView() {
 
 
   return (
-    <div className="space-y-6 p-4 md:p-8 bg-secondary/30 min-h-screen">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-          <Icons.Radar className="w-8 h-8 text-primary" />
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6 bg-secondary/30 min-h-screen">
+      <header className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+          <Icons.Radar className="w-7 h-7 md:w-8 md:h-8 text-primary" />
           API Discovery Scanner
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Automatically discover, analyze, and monitor APIs across your enterprise. (Simulated)
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
         <Card className="shadow-lg bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">APIs Discovered</CardTitle>
+            <CardTitle className="text-xs font-medium">APIs Discovered</CardTitle>
             <Icons.Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{discoveredApis.length}</div>
-            <p className="text-xs text-muted-foreground">Total APIs found in the ecosystem</p>
+            <div className="text-xl md:text-2xl font-bold">{discoveredApis.length}</div>
+            <p className="text-xs text-muted-foreground">Total APIs found</p>
           </CardContent>
         </Card>
         <Card className="shadow-lg bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Undocumented APIs</CardTitle>
+            <CardTitle className="text-xs font-medium">Undocumented</CardTitle>
             <Icons.Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{discoveredApis.filter(api => api.isUndocumented).length}</div>
-            <p className="text-xs text-muted-foreground">APIs without formal documentation</p>
+            <div className="text-xl md:text-2xl font-bold">{discoveredApis.filter(api => api.isUndocumented).length}</div>
+            <p className="text-xs text-muted-foreground">Without documentation</p>
           </CardContent>
         </Card>
          <Card className="shadow-lg bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Issues Detected</CardTitle>
+            <CardTitle className="text-xs font-medium">Issues Detected</CardTitle>
             <Icons.AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{issuesDetected}</div>
-            <p className="text-xs text-muted-foreground">Potential vulnerabilities & misconfigs</p>
+            <div className="text-xl md:text-2xl font-bold text-destructive">{issuesDetected}</div>
+            <p className="text-xs text-muted-foreground">Potential issues</p>
           </CardContent>
         </Card>
         <Card className="shadow-lg bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recommendations</CardTitle>
+            <CardTitle className="text-xs font-medium">Recommendations</CardTitle>
             <Icons.Lightbulb className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{recommendationsCount}</div>
-            <p className="text-xs text-muted-foreground">Actionable insights for improvement</p>
+            <div className="text-xl md:text-2xl font-bold">{recommendationsCount}</div>
+            <p className="text-xs text-muted-foreground">Improvement insights</p>
           </CardContent>
         </Card>
       </div>
       
       <Card className="shadow-xl bg-card">
-        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
             <div>
-                <CardTitle className="text-xl">Discovered API Inventory</CardTitle>
-                <CardDescription>List of APIs identified during the scan.</CardDescription>
+                <CardTitle className="text-lg md:text-xl">Discovered API Inventory</CardTitle>
+                <CardDescription className="text-xs md:text-sm">List of APIs identified during the scan.</CardDescription>
             </div>
-          <Button onClick={handleStartScan} disabled={isLoading} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button onClick={handleStartScan} disabled={isLoading} size="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
             {isLoading ? (
-              <Icons.Loader className="mr-2 h-5 w-5 animate-spin" />
+              <Icons.Loader className="mr-2 h-4 w-4 md:h-5 md:h-5 animate-spin" />
             ) : (
-              <Icons.PlayCircle className="mr-2 h-5 w-5" />
+              <Icons.PlayCircle className="mr-2 h-4 w-4 md:h-5 md:h-5" />
             )}
             Start New Scan
           </Button>
         </CardHeader>
         <CardContent>
           {isLoading && (
-            <div className="py-8 text-center">
-              <Progress value={scanProgress} className="w-full h-3 mb-3" />
-              <p className="text-sm text-muted-foreground">Scanning for APIs... {scanProgress.toFixed(0)}%</p>
+            <div className="py-6 md:py-8 text-center">
+              <Progress value={scanProgress} className="w-full h-2 md:h-3 mb-2 md:mb-3" />
+              <p className="text-xs md:text-sm text-muted-foreground">Scanning for APIs... {scanProgress.toFixed(0)}%</p>
             </div>
           )}
           {!isLoading && discoveredApis.length === 0 && (
             <Alert className="bg-background">
               <Icons.Info className="h-4 w-4" />
-              <AlertTitle>No Scan Performed Yet</AlertTitle>
-              <AlertDescription>
+              <AlertTitle className="text-sm md:text-base">No Scan Performed Yet</AlertTitle>
+              <AlertDescription className="text-xs md:text-sm">
                 Click "Start New Scan" to discover APIs in your environment.
               </AlertDescription>
             </Alert>
           )}
           {!isLoading && discoveredApis.length > 0 && (
-            <ScrollArea className="h-[500px] border rounded-md">
+            <ScrollArea className="h-[400px] md:h-[500px] border rounded-md">
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[180px]">Name</TableHead>
-                    <TableHead className="min-w-[200px]">Endpoint</TableHead>
-                    <TableHead className="w-[90px]">Method</TableHead>
-                    <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[100px]">Response Time</TableHead>
-                    <TableHead className="w-[90px]">Security</TableHead>
-                    <TableHead className="w-[80px] text-center">Undoc'd</TableHead>
-                    <TableHead className="w-[140px]">Last Scanned</TableHead>
-                    <TableHead className="w-[180px] text-right">Actions</TableHead>
+                    <TableHead className="w-[180px] text-xs">Name</TableHead>
+                    <TableHead className="min-w-[200px] text-xs">Endpoint</TableHead>
+                    <TableHead className="w-[90px] text-xs">Method</TableHead>
+                    <TableHead className="w-[100px] text-xs">Status</TableHead>
+                    <TableHead className="w-[100px] text-xs">Response (ms)</TableHead>
+                    <TableHead className="w-[90px] text-xs">Security</TableHead>
+                    <TableHead className="w-[80px] text-center text-xs">Undoc'd</TableHead>
+                    <TableHead className="w-[140px] text-xs">Last Scanned</TableHead>
+                    <TableHead className="w-[180px] text-right text-xs">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {discoveredApis.map((api) => (
                     <TableRow key={api.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium text-foreground">{api.name}</TableCell>
+                      <TableCell className="font-medium text-foreground text-xs">{api.name}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{api.endpoint}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs method-badge-${api.method.toLowerCase()}`}>{api.method}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          className={`text-xs ${getStatusColor(api.status)} text-white`}
-                        >
-                            {api.status.charAt(0).toUpperCase() + api.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{api.responseTime} ms</TableCell>
-                      <TableCell>
-                        <Badge variant={getSecurityBadgeVariant(api.security)} className="capitalize text-xs">
-                          {api.security}
-                        </Badge>
-                      </TableCell>
-                       <TableCell className="text-center">
-                        {api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" title="Undocumented API"/> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" title="Documented"/>}
-                      </TableCell>
+                      <TableCell><Badge variant="outline" className={`text-xs method-badge-${api.method.toLowerCase()}`}>{api.method}</Badge></TableCell>
+                      <TableCell><Badge className={`text-xs ${getStatusColor(api.status)} text-white`}>{api.status.charAt(0).toUpperCase() + api.status.slice(1)}</Badge></TableCell>
+                      <TableCell className="text-xs">{api.responseTime} ms</TableCell>
+                      <TableCell><Badge variant={getSecurityBadgeVariant(api.security)} className="capitalize text-xs">{api.security}</Badge></TableCell>
+                      <TableCell className="text-center">{api.isUndocumented ? <Icons.AlertTriangle className="w-4 h-4 text-orange-500 inline-block" title="Undocumented API"/> : <Icons.CheckCircle2 className="w-4 h-4 text-green-500 inline-block" title="Documented"/>}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{api.lastScanned}</TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleAnalyzeApi(api)}>
-                          <Icons.Search className="w-4 h-4 mr-1" /> Analyze
+                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => handleAnalyzeApi(api)}>
+                          <Icons.Search className="w-3 h-3 md:w-4 md:h-4 mr-1" /> Analyze
                         </Button>
                         {api.isUndocumented && (
-                          <Button variant="outline" size="sm" onClick={() => handleGenerateDoc(api.id)}>
-                            <Icons.FilePlus2 className="w-4 h-4 mr-1" /> Generate Doc
+                          <Button variant="outline" size="sm" className="text-xs" onClick={() => handleGenerateDoc(api.id)}>
+                            <Icons.FilePlus2 className="w-3 h-3 md:w-4 md:h-4 mr-1" /> Generate Doc
                           </Button>
                         )}
                       </TableCell>
@@ -405,21 +395,21 @@ export function APIDiscoveryScannerView() {
 
       {selectedApiForAnalysis && currentAnalysisDetails && (
         <AlertDialog open={isAnalysisModalOpen} onOpenChange={setIsAnalysisModalOpen}>
-          <AlertDialogContent className="max-w-2xl">
+          <AlertDialogContent className="max-w-xl md:max-w-2xl">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl flex items-center gap-2">
-                <Icons.ClipboardCheck className="w-6 h-6 text-primary" /> Analysis Report: {selectedApiForAnalysis.name}
+              <AlertDialogTitle className="text-lg md:text-xl flex items-center gap-2">
+                <Icons.ClipboardCheck className="w-5 h-5 md:w-6 md:h-6 text-primary" /> Analysis Report: {selectedApiForAnalysis.name}
               </AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription className="text-xs md:text-sm">
                 Detailed (simulated) analysis for {selectedApiForAnalysis.method} <code>{selectedApiForAnalysis.endpoint}</code>
               </AlertDialogDescription>
             </AlertDialogHeader>
             
-            <ScrollArea className="max-h-[60vh] pr-4">
-                <div className="space-y-4 text-sm my-4">
+            <ScrollArea className="max-h-[50vh] md:max-h-[60vh] pr-3 md:pr-4">
+                <div className="space-y-3 md:space-y-4 text-xs md:text-sm my-3 md:my-4">
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Overall Health: <Badge variant={currentAnalysisDetails.overallHealth === 'Good' ? 'default' : currentAnalysisDetails.overallHealth === 'Fair' ? 'secondary' : 'destructive' } className="ml-2">{currentAnalysisDetails.overallHealth}</Badge></CardTitle>
+                            <CardTitle className="text-sm md:text-base">Overall Health: <Badge variant={currentAnalysisDetails.overallHealth === 'Good' ? 'default' : currentAnalysisDetails.overallHealth === 'Fair' ? 'secondary' : 'destructive' } className="ml-2 text-xs">{currentAnalysisDetails.overallHealth}</Badge></CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-xs text-muted-foreground">Based on simulated scan data.</p>
@@ -428,7 +418,7 @@ export function APIDiscoveryScannerView() {
 
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center gap-2"><Icons.Eye className="w-4 h-4"/>Key Observations</CardTitle>
+                            <CardTitle className="text-sm md:text-base flex items-center gap-2"><Icons.Eye className="w-4 h-4"/>Key Observations</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <ul className="list-disc list-inside space-y-1 text-xs">
@@ -440,7 +430,7 @@ export function APIDiscoveryScannerView() {
                     {currentAnalysisDetails.issues.length > 0 && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-base flex items-center gap-2"><Icons.AlertTriangle className="w-4 h-4 text-destructive"/>Identified Issues ({currentAnalysisDetails.issues.length})</CardTitle>
+                                <CardTitle className="text-sm md:text-base flex items-center gap-2"><Icons.AlertTriangle className="w-4 h-4 text-destructive"/>Identified Issues ({currentAnalysisDetails.issues.length})</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
                                 {currentAnalysisDetails.issues.map(issue => (
@@ -460,7 +450,7 @@ export function APIDiscoveryScannerView() {
                     {currentAnalysisDetails.recommendations.length > 0 && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-base flex items-center gap-2"><Icons.Wrench className="w-4 h-4 text-blue-500"/>Recommendations ({currentAnalysisDetails.recommendations.length})</CardTitle>
+                                <CardTitle className="text-sm md:text-base flex items-center gap-2"><Icons.Wrench className="w-4 h-4 text-blue-500"/>Recommendations ({currentAnalysisDetails.recommendations.length})</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
                                  {currentAnalysisDetails.recommendations.map(rec => (
@@ -476,7 +466,7 @@ export function APIDiscoveryScannerView() {
                         </Card>
                     )}
                     <Separator />
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 text-xs">
                          <Card className="p-3">
                              <h4 className="font-semibold mb-1">Performance Snapshot</h4>
                              <p>Avg. Response Time: {currentAnalysisDetails.performanceSnapshot.avgResponseTime}</p>
@@ -511,3 +501,5 @@ export function APIDiscoveryScannerView() {
     </div>
   );
 }
+
+    

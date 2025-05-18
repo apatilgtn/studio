@@ -41,7 +41,7 @@ const formSchema = z.discriminatedUnion("type", [
 type FormValues = z.infer<typeof formSchema>;
 
 export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: string) => void }) {
-  const { setSpec, setError, setLoading, isLoading, fileName: currentFileName } =
+  const { setSpec, setError, setLoading, isLoading, fileName: currentFileName, activeSpecId, clear: clearActiveSpec } =
     useOpenApiStore();
   const { toast } = useToast();
 
@@ -78,16 +78,16 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         if (!response.ok) {
           let descriptiveError = `Error fetching spec via proxy: ${response.status} ${response.statusText}`;
           try {
-            const errorJson = JSON.parse(responseBodyText); // Try to parse as JSON first
+            const errorJson = JSON.parse(responseBodyText); 
             if (errorJson && errorJson.error) {
                descriptiveError = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
-            } else if (errorJson && errorJson.message) { // Some APIs might return { message: ... }
+            } else if (errorJson && errorJson.message) { 
                descriptiveError = typeof errorJson.message === 'string' ? errorJson.message : JSON.stringify(errorJson.message);
-            } else { // If not standard JSON error, use the text content if available
-               descriptiveError = `External server returned status ${response.status} with unexpected content.`;
+            } else { 
+               descriptiveError = `Proxy API returned an invalid error format (Status: ${response.status}). Raw: ${responseBodyText.substring(0,150)}...`;
             }
-          } catch (e) { // If parsing responseBodyText as JSON fails
-             if (responseBodyText.toLowerCase().includes("<html")) {
+          } catch (e) { 
+            if (responseBodyText.toLowerCase().includes("<html")) {
                descriptiveError = `Failed to fetch spec. External server at ${data.url} returned an HTML page (status ${response.status} ${response.statusText}). This could be an error page or authentication prompt.`;
              } else {
                descriptiveError = `Failed to fetch spec. External server at ${data.url} returned status ${response.status} ${response.statusText} with unexpected content. Preview (first 100 chars): ${responseBodyText.substring(0, 100)}...`;
@@ -97,7 +97,6 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
           throw new Error(descriptiveError);
         }
         
-        // If response.ok, parse the already read responseBodyText
         const result = JSON.parse(responseBodyText); 
         
         if (result.error) { 
@@ -106,13 +105,13 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         
         specObject = result.specObject as OpenAPI.Document;
         rawSpecText = result.rawSpecText;
-        wasVersionOverridden = result.versionOverridden || false; // Get override status from proxy
+        wasVersionOverridden = result.versionOverridden || false; 
         inputFileName = data.url.substring(data.url.lastIndexOf('/') + 1) || "openapi-spec-from-url";
 
-      } else { // type === "file"
+      } else { 
         const file = data.file![0]; 
         inputFileName = file.name;
-        const fileContentText = await file.text(); // rawSpecText for file case was not being set before.
+        const fileContentText = await file.text();
         
         let parsedContentForFile: any; 
         if (inputFileName.endsWith(".yaml") || inputFileName.endsWith(".yml")) {
@@ -121,7 +120,7 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
           parsedContentForFile = JSON.parse(fileContentText);
         }
         
-        const originalVersionFromFile = parsedContentForFile.openapi; // Capture original version for toast
+        const originalVersionFromFile = parsedContentForFile.openapi; 
 
         if (parsedContentForFile.openapi && typeof parsedContentForFile.openapi === 'string' && 
             parsedContentForFile.openapi.startsWith('3.0.') && parsedContentForFile.openapi > '3.0.3') {
@@ -131,19 +130,16 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         }
 
         try {
-          // Use parsedContentForFile for bundling as it might have the version override
           const specToBundle = JSON.parse(JSON.stringify(parsedContentForFile)); 
           specObject = (await SwaggerParser.bundle(specToBundle)) as OpenAPI.Document;
         } catch (bundleError: any) {
-            // If override happened and bundling still failed, mention it
             if (wasVersionOverridden) {
                  throw new Error(`Failed to bundle after overriding file version from ${originalVersionFromFile} to 3.0.3: ${bundleError.message}`);
             }
-            throw bundleError; // Re-throw original error if no override or override didn't help
+            throw bundleError; 
         }
-        rawSpecText = YAML.dump(specObject); // Ensure rawSpecText is set for file uploads too
+        rawSpecText = YAML.dump(specObject); 
 
-        // Toast for version override (file upload)
         if (wasVersionOverridden) {
           toast({
             title: "Version Override (File)",
@@ -154,11 +150,12 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
         }
       }
       
+      const newSpecId = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setSpec({
         specObject,
         rawSpecText,
         name: inputFileName,
-        id: `temp-${Date.now()}`, 
+        id: newSpecId, 
       });
 
       if (wasVersionOverridden && data.type === 'url') {
@@ -204,16 +201,16 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
 
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-lg">
+    <Card className="w-full max-w-xl mx-auto shadow-lg"> {/* Slightly reduced max-width */}
       <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2">
-          <Icons.UploadCloud className="w-6 h-6 text-primary" />
+        <CardTitle className="text-xl md:text-2xl flex items-center gap-2"> {/* Reduced size */}
+          <Icons.UploadCloud className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           Import OpenAPI Specification
         </CardTitle>
-        <CardDescription>
-          Upload a file (JSON/YAML) or provide a URL. The imported spec will be active for the current session.
+        <CardDescription className="text-xs md:text-sm">
+          Upload a file (JSON/YAML) or provide a URL. Active for current session.
           {currentFileName && (
-             <span className="block mt-2 text-sm text-muted-foreground">
+             <span className="block mt-1.5 text-xs text-muted-foreground"> {/* Reduced margin/text */}
                 Currently active: <strong className="text-foreground">{currentFileName}</strong>
             </span>
           )}
@@ -232,35 +229,35 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
           form.clearErrors(); 
         }}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="url"><Icons.Globe className="w-4 h-4 mr-2" />From URL</TabsTrigger>
-            <TabsTrigger value="file"><Icons.FileJson className="w-4 h-4 mr-2" />Upload File</TabsTrigger>
+            <TabsTrigger value="url"><Icons.Globe className="w-3.5 h-3.5 mr-1.5" />From URL</TabsTrigger> {/* Smaller icon/margin */}
+            <TabsTrigger value="file"><Icons.FileJson className="w-3.5 h-3.5 mr-1.5" />Upload File</TabsTrigger>
           </TabsList>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6 mt-3 md:mt-4"> {/* Reduced spacing/margin */}
               <TabsContent value="url">
                 <FormField
                   control={form.control}
                   name="url"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Specification URL</FormLabel>
+                      <FormLabel className="text-xs md:text-sm">Specification URL</FormLabel> {/* Reduced size */}
                       <FormControl>
                         <Input placeholder="e.g., https://petstore3.swagger.io/api/v3/openapi.json" {...field} />
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription className="text-xs">
                         Enter the public URL of your OpenAPI specification file (JSON or YAML).
                       </FormDescription>
                       <FormMessage />
-                       <div className="mt-3 pt-2 border-t">
-                            <p className="text-xs text-muted-foreground mb-1.5">Or try an example:</p>
-                            <div className="flex flex-wrap gap-2">
+                       <div className="mt-2.5 pt-1.5 border-t"> {/* Reduced margin/padding */}
+                            <p className="text-xs text-muted-foreground mb-1">Or try an example:</p>
+                            <div className="flex flex-wrap gap-1.5 md:gap-2"> {/* Reduced gap */}
                                 {exampleSpecs.map(spec => (
                                     <Button 
                                         key={spec.url} 
                                         type="button" 
                                         variant="outline" 
                                         size="sm" 
-                                        className="text-xs"
+                                        className="text-xs h-8" /* Reduced height */
                                         onClick={() => {
                                           form.setValue("url", spec.url);
                                           form.clearErrors("url"); 
@@ -281,7 +278,7 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
                   name="file"
                   render={({ field: { onChange, onBlur, name, ref } }) => ( 
                     <FormItem>
-                      <FormLabel>Specification File</FormLabel>
+                      <FormLabel className="text-xs md:text-sm">Specification File</FormLabel> {/* Reduced size */}
                       <FormControl>
                         <Input 
                           type="file" 
@@ -290,9 +287,10 @@ export function OpenApiUploadForm({ onSpecLoaded }: { onSpecLoaded?: (name: stri
                           onBlur={onBlur}
                           name={name}
                           ref={ref}
+                          className="text-xs" /* Smaller text for file input itself */
                         />
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription className="text-xs">
                         Upload a .json, .yaml, or .yml file from your computer.
                       </FormDescription>
                       <FormMessage />

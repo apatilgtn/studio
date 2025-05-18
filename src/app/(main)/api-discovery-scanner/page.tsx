@@ -3,8 +3,7 @@ import { APIDiscoveryScannerView } from "@/components/api-discovery-scanner/api-
 
 export default function APIDiscoveryScannerPage() {
   return (
-    <div className="container mx-auto py-8">
-      <APIDiscoveryScannerView />
-    </div>
+    // Removed container and mx-auto to allow APIDiscoveryScannerView to control its padding
+    <APIDiscoveryScannerView />
   );
 }
